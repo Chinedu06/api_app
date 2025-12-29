@@ -1,0 +1,866 @@
+openapi: 3.0.3
+info:
+  title: Allicom Travels API
+  version: 1.0.0
+  description: Backend API for Allicom Tourism & Travel Services
+paths:
+  /api/v1/api/bookings/{booking_id}/status/:
+    post:
+      operationId: v1_api_bookings_status_create
+      description: |-
+        Patch endpoint:
+            POST /api/bookings/<id>/status/
+            { "status": "confirmed" }
+      parameters:
+      - in: path
+        name: booking_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/api/bookings/all/:
+    get:
+      operationId: v1_api_bookings_all_list
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+          description: ''
+  /api/v1/api/bookings/create/:
+    post:
+      operationId: v1_api_bookings_create_create
+      description: Public endpoint — allows both authenticated & guest users.
+      tags:
+      - v1
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/Booking'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/Booking'
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/Booking'
+        required: true
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Booking'
+          description: ''
+  /api/v1/api/bookings/mine/:
+    get:
+      operationId: v1_api_bookings_mine_list
+      description: Shows bookings only for the authenticated user.
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Booking'
+          description: ''
+  /api/v1/api/bookings/notifications/:
+    get:
+      operationId: v1_api_bookings_notifications_list
+      description: Shows notifications for the logged-in user.
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Notification'
+          description: ''
+  /api/v1/api/bookings/notifications/{notif_id}/read/:
+    post:
+      operationId: v1_api_bookings_notifications_read_create
+      description: POST /api/notifications/<id>/read/
+      parameters:
+      - in: path
+        name: notif_id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          description: No response body
+  /api/v1/api/services/:
+    get:
+      operationId: v1_api_services_list
+      description: Returns a list of all active services.
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Service'
+          description: ''
+  /api/v1/api/services/{slug}/:
+    get:
+      operationId: v1_api_services_retrieve
+      description: Returns details of a single service including its packages.
+      parameters:
+      - in: path
+        name: slug
+        schema:
+          type: string
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Service'
+          description: ''
+  /api/v1/api/services/packages/:
+    get:
+      operationId: v1_api_services_packages_list
+      description: List all packages (usually used internally).
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/Package'
+          description: ''
+  /api/v1/api/services/packages/{id}/:
+    get:
+      operationId: v1_api_services_packages_retrieve
+      description: Get a single package by ID.
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Package'
+          description: ''
+  /api/v1/api/users/operators/login/:
+    post:
+      operationId: v1_api_users_operators_login_create
+      description: |-
+        POST /api/users/operators/login/
+        Login with email + password. Returns JWT tokens if verified.
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+  /api/v1/api/users/operators/profile/:
+    get:
+      operationId: v1_api_users_operators_profile_list
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/SupplierProfile'
+          description: ''
+    post:
+      operationId: v1_api_users_operators_profile_create
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SupplierProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SupplierProfile'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '201':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierProfile'
+          description: ''
+  /api/v1/api/users/operators/profile/{id}/:
+    get:
+      operationId: v1_api_users_operators_profile_retrieve
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this supplier profile.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierProfile'
+          description: ''
+    put:
+      operationId: v1_api_users_operators_profile_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this supplier profile.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SupplierProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SupplierProfile'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierProfile'
+          description: ''
+    patch:
+      operationId: v1_api_users_operators_profile_partial_update
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this supplier profile.
+        required: true
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSupplierProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSupplierProfile'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierProfile'
+          description: ''
+    delete:
+      operationId: v1_api_users_operators_profile_destroy
+      parameters:
+      - in: path
+        name: id
+        schema:
+          type: integer
+        description: A unique integer value identifying this supplier profile.
+        required: true
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '204':
+          description: No response body
+  /api/v1/api/users/operators/profile/me/:
+    get:
+      operationId: v1_api_users_operators_profile_me_retrieve
+      description: |-
+        GET  /api/users/operators/profile/me/
+        PATCH/PUT  /api/users/operators/profile/me/
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierProfile'
+          description: ''
+    put:
+      operationId: v1_api_users_operators_profile_me_update
+      description: |-
+        GET  /api/users/operators/profile/me/
+        PATCH/PUT  /api/users/operators/profile/me/
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/SupplierProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/SupplierProfile'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierProfile'
+          description: ''
+    patch:
+      operationId: v1_api_users_operators_profile_me_partial_update
+      description: |-
+        GET  /api/users/operators/profile/me/
+        PATCH/PUT  /api/users/operators/profile/me/
+      tags:
+      - v1
+      requestBody:
+        content:
+          multipart/form-data:
+            schema:
+              $ref: '#/components/schemas/PatchedSupplierProfile'
+          application/x-www-form-urlencoded:
+            schema:
+              $ref: '#/components/schemas/PatchedSupplierProfile'
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      responses:
+        '200':
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SupplierProfile'
+          description: ''
+  /api/v1/api/users/operators/signup/:
+    post:
+      operationId: v1_api_users_operators_signup_create
+      description: |-
+        POST /api/users/operators/signup/
+        Register a new operator (requires phone_number).
+        Account stays inactive until admin verifies.
+      tags:
+      - v1
+      security:
+      - jwtAuth: []
+      - cookieAuth: []
+      - bearerAuth: []
+      - {}
+      responses:
+        '200':
+          description: No response body
+components:
+  schemas:
+    Booking:
+      type: object
+      description: |-
+        Serializer for creating and viewing bookings.
+        Includes full personal details + package + service.
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: integer
+          readOnly: true
+          nullable: true
+        service:
+          type: integer
+        service_title:
+          type: string
+          readOnly: true
+        package:
+          type: integer
+          nullable: true
+        package_name:
+          type: string
+          readOnly: true
+        given_name:
+          type: string
+          maxLength: 150
+        surname:
+          type: string
+          maxLength: 150
+        other_names:
+          type: string
+          maxLength: 150
+        contact_number:
+          type: string
+          maxLength: 40
+        email:
+          type: string
+          format: email
+          maxLength: 254
+        full_contact_address:
+          type: string
+        num_adults:
+          type: integer
+          maximum: 4294967295
+          minimum: 0
+          format: int64
+        num_children:
+          type: integer
+          maximum: 4294967295
+          minimum: 0
+          format: int64
+        start_date:
+          type: string
+          format: date
+        end_date:
+          type: string
+          format: date
+          nullable: true
+        notes:
+          type: string
+        admin_note:
+          type: string
+          readOnly: true
+        status:
+          allOf:
+          - $ref: '#/components/schemas/StatusEnum'
+          readOnly: true
+        payment_status:
+          allOf:
+          - $ref: '#/components/schemas/PaymentStatusEnum'
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - admin_note
+      - contact_number
+      - created_at
+      - email
+      - given_name
+      - id
+      - package_name
+      - payment_status
+      - service
+      - service_title
+      - start_date
+      - status
+      - surname
+      - updated_at
+      - user
+    Notification:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        recipient:
+          type: integer
+          nullable: true
+        recipient_username:
+          type: string
+          readOnly: true
+        message:
+          type: string
+        is_read:
+          type: boolean
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - created_at
+      - id
+      - message
+      - recipient_username
+    Package:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        name:
+          type: string
+          maxLength: 120
+        description:
+          type: string
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        duration_days:
+          type: integer
+          maximum: 4294967295
+          minimum: 0
+          format: int64
+          nullable: true
+          description: Optional duration override in days
+        max_people:
+          type: integer
+          maximum: 4294967295
+          minimum: 0
+          format: int64
+          nullable: true
+          description: Optional max capacity
+        is_active:
+          type: boolean
+      required:
+      - id
+      - name
+      - price
+    PatchedSupplierProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          readOnly: true
+        trading_name:
+          type: string
+          maxLength: 255
+        company_name:
+          type: string
+          maxLength: 255
+        registration_number:
+          type: string
+          maxLength: 100
+        business_address:
+          type: string
+        business_phone:
+          type: string
+          maxLength: 30
+        business_email:
+          type: string
+          format: email
+          maxLength: 254
+        owner_full_name:
+          type: string
+          maxLength: 255
+        owner_phone:
+          type: string
+          maxLength: 30
+        owner_email:
+          type: string
+          format: email
+          maxLength: 254
+        contact_person_name:
+          type: string
+          maxLength: 255
+        contact_person_phone:
+          type: string
+          maxLength: 30
+        contact_person_email:
+          type: string
+          format: email
+          maxLength: 254
+        association_certificate:
+          type: string
+          format: uri
+          nullable: true
+        business_certificate:
+          type: string
+          format: uri
+          nullable: true
+        association_certificate_url:
+          type: string
+          readOnly: true
+        business_certificate_url:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+    PaymentStatusEnum:
+      enum:
+      - unpaid
+      - paid
+      - pending_verification
+      type: string
+      description: |-
+        * `unpaid` - Unpaid
+        * `paid` - Paid
+        * `pending_verification` - Pending Verification
+    Service:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        title:
+          type: string
+          maxLength: 200
+        slug:
+          type: string
+          maxLength: 255
+          pattern: ^[-a-zA-Z0-9_]+$
+        description:
+          type: string
+        price:
+          type: string
+          format: decimal
+          pattern: ^-?\d{0,8}(?:\.\d{0,2})?$
+        is_active:
+          type: boolean
+        images:
+          type: array
+          items:
+            $ref: '#/components/schemas/ServiceImage'
+          readOnly: true
+        images_count:
+          type: integer
+          readOnly: true
+        packages:
+          type: array
+          items:
+            $ref: '#/components/schemas/Package'
+          readOnly: true
+      required:
+      - description
+      - id
+      - images
+      - images_count
+      - packages
+      - price
+      - title
+    ServiceImage:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        image:
+          type: string
+          format: uri
+        uploaded_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - id
+      - image
+      - uploaded_at
+    StatusEnum:
+      enum:
+      - pending
+      - paid
+      - confirmed
+      - cancelled
+      - rejected
+      type: string
+      description: |-
+        * `pending` - Pending
+        * `paid` - Paid
+        * `confirmed` - Confirmed
+        * `cancelled` - Cancelled
+        * `rejected` - Rejected
+    SupplierProfile:
+      type: object
+      properties:
+        id:
+          type: integer
+          readOnly: true
+        user:
+          type: string
+          description: Required. 150 characters or fewer. Letters, digits and @/./+/-/_
+            only.
+          readOnly: true
+        trading_name:
+          type: string
+          maxLength: 255
+        company_name:
+          type: string
+          maxLength: 255
+        registration_number:
+          type: string
+          maxLength: 100
+        business_address:
+          type: string
+        business_phone:
+          type: string
+          maxLength: 30
+        business_email:
+          type: string
+          format: email
+          maxLength: 254
+        owner_full_name:
+          type: string
+          maxLength: 255
+        owner_phone:
+          type: string
+          maxLength: 30
+        owner_email:
+          type: string
+          format: email
+          maxLength: 254
+        contact_person_name:
+          type: string
+          maxLength: 255
+        contact_person_phone:
+          type: string
+          maxLength: 30
+        contact_person_email:
+          type: string
+          format: email
+          maxLength: 254
+        association_certificate:
+          type: string
+          format: uri
+          nullable: true
+        business_certificate:
+          type: string
+          format: uri
+          nullable: true
+        association_certificate_url:
+          type: string
+          readOnly: true
+        business_certificate_url:
+          type: string
+          readOnly: true
+        created_at:
+          type: string
+          format: date-time
+          readOnly: true
+        updated_at:
+          type: string
+          format: date-time
+          readOnly: true
+      required:
+      - association_certificate_url
+      - business_certificate_url
+      - created_at
+      - id
+      - updated_at
+      - user
+  securitySchemes:
+    cookieAuth:
+      type: apiKey
+      in: cookie
+      name: sessionid
+    jwtAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
