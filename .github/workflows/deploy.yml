@@ -1,4 +1,4 @@
-name: Deploy Django API (Production)
+name: Deploy Django API
 
 on:
   push:
@@ -10,46 +10,38 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout repository
+      - name: Checkout code
         uses: actions/checkout@v4
 
-      - name: Setup SSH agent
+      - name: Setup SSH
         uses: webfactory/ssh-agent@v0.9.0
         with:
           ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
 
-      - name: Deploy to production server
+      - name: Deploy to server
         run: |
-          set -e
-
-          echo "🚀 Connecting to production server..."
-
           ssh -o StrictHostKeyChecking=no \
           ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
 
-          set -e
+          cd ${{ secrets.PROJECT_PATH }}
 
-          echo "📁 Moving to project directory..."
-          cd ${{ vars.PROJECT_PATH }}
-
-          echo "📥 Pulling latest code..."
+          echo "Pulling latest code..."
           git pull origin main
 
-          echo "🐍 Activating virtual environment..."
+          echo "Activating virtualenv..."
           source venv/bin/activate
 
-          echo "📦 Installing dependencies..."
+          echo "Installing requirements..."
           pip install -r requirements.txt
 
-          echo "🧱 Running migrations..."
+          echo "Running migrations..."
           python manage.py migrate --noinput
 
-          echo "🗂 Collecting static files..."
+          echo "Collecting static files..."
           python manage.py collectstatic --noinput
 
-          echo "🔄 Restarting application..."
+          echo "Restarting application..."
           touch tmp/restart.txt
 
-          echo "✅ Deployment completed successfully."
-
           EOF
+
