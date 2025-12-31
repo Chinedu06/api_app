@@ -8,14 +8,15 @@ User = get_user_model()
 
 
 class OperatorRegisterSerializer(serializers.ModelSerializer):
+    username = serializers.CharField(
+        required=False,
+        allow_blank=True
+    )
     password = serializers.CharField(write_only=True, min_length=6)
 
     class Meta:
         model = User
         fields = ['username', 'email', 'password', 'phone_number']
-        extra_kwargs = {
-            'username': {'required': False}
-        }
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -25,7 +26,7 @@ class OperatorRegisterSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         username = validated_data.get('username')
 
-        # ✅ Auto-generate username if missing
+        # ✅ Auto-generate username if missing or empty
         if not username:
             base = validated_data['email'].split('@')[0]
             username = base
