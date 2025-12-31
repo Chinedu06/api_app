@@ -13,6 +13,9 @@ class OperatorRegisterSerializer(serializers.ModelSerializer):
     class Meta:
         model = User
         fields = ['username', 'email', 'password', 'phone_number']
+        extra_kwargs = {
+            'username': {'required': False}
+        }
 
     def validate_email(self, value):
         if User.objects.filter(email=value).exists():
@@ -20,10 +23,21 @@ class OperatorRegisterSerializer(serializers.ModelSerializer):
         return value
 
     def create(self, validated_data):
+        username = validated_data.get('username')
+
+        # ✅ Auto-generate username if missing
+        if not username:
+            base = validated_data['email'].split('@')[0]
+            username = base
+            counter = 1
+            while User.objects.filter(username=username).exists():
+                username = f"{base}{counter}"
+                counter += 1
+
         user = User.objects.create_user(
-            username=validated_data['username'],
+            username=username,
             email=validated_data['email'],
-            phone_number=validated_data['phone_number'],
+            phone_number=validated_data.get('phone_number'),
             role=User.ROLE_OPERATOR,
             is_verified=False
         )
