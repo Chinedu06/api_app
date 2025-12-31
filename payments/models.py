@@ -82,7 +82,7 @@ class Transaction(models.Model):
         """
         Create or update Payment record from this transaction.
         """
-        from payments.models import Payment  # local import to avoid circular at top-level
+        from payments.models import Payment  # local import to avoid circular imports
 
         Payment.objects.update_or_create(
             booking=self.booking,
@@ -95,11 +95,12 @@ class Transaction(models.Model):
             },
         )
 
-        # Update booking
-        b = self.booking
-        b.payment_status = "paid"
-        b.status = Booking.STATUS_CONFIRMED
-        b.save(update_fields=["payment_status", "status", "updated_at"])
+        # 🔐 SINGLE SOURCE OF TRUTH
+        self.booking.mark_paid()
+
+    last_checked_at = models.DateTimeField(null=True, blank=True)
+    retry_count = models.PositiveIntegerField(default=0)
+
 
 
 class Payment(models.Model):

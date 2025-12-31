@@ -121,3 +121,40 @@ class MarkNotificationReadView(APIView):
         notif.save()
 
         return Response({"message": "Notification marked as read"})
+
+class GuestBookingDetailView(generics.RetrieveAPIView):
+    """
+    Allows a guest (non-authenticated user) to retrieve
+    their booking using booking ID + email.
+    """
+    serializer_class = BookingSerializer
+    permission_classes = [permissions.AllowAny]
+    lookup_field = "id"
+
+    def get_queryset(self):
+        email = self.request.query_params.get("email")
+
+        # No email → no access
+        if not email:
+            return Booking.objects.none()
+
+        return Booking.objects.filter(email=email)
+
+class OperatorBookingsView(generics.ListAPIView):
+    """
+    Allows an operator to view bookings
+    made for their own services only.
+    """
+    serializer_class = BookingSerializer
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get_queryset(self):
+        user = self.request.user
+
+        # Extra safety check
+        if getattr(user, "role", None) != "operator":
+            return Booking.objects.none()
+
+        return Booking.objects.filter(
+            service__operator=user
+        ).order_by("-created_at")

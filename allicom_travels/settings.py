@@ -1,16 +1,21 @@
 import os
 from pathlib import Path
 from datetime import timedelta
+from dotenv import load_dotenv
+
+load_dotenv()
 
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY
-SECRET_KEY = os.environ.get("SECRET_KEY")
-DEBUG = False
+SECRET_KEY = os.environ.get("DJANGO_SECRET_KEY", "unsafe-dev-key")
+DEBUG = os.environ.get("DEBUG") == "True"
 
 ALLOWED_HOSTS = [
     "api.allicomtourism.com",
     "www.api.allicomtourism.com",
+    "127.0.0.1",
+    "localhost",
 ]
 
 # APPLICATIONS
@@ -70,18 +75,24 @@ WSGI_APPLICATION = "allicom_travels.wsgi.application"
 # DATABASE (MySQL / MariaDB)
 DATABASES = {
     "default": {
-        "ENGINE": "django.db.backends.mysql",
-        "NAME": "allicomt_booking",
-        "USER": "allicomt_booking",
-        "PASSWORD": "Setup2025",
-        "HOST": "localhost",
-        "PORT": "3306",
+        "ENGINE": os.environ.get(
+            "DB_ENGINE",
+            "django.db.backends.sqlite3"
+        ),
+        "NAME": os.environ.get(
+            "DB_NAME",
+            BASE_DIR / "db.sqlite3"
+        ),
+        "USER": os.environ.get("DB_USER", ""),
+        "PASSWORD": os.environ.get("DB_PASSWORD", ""),
+        "HOST": os.environ.get("DB_HOST", ""),
+        "PORT": os.environ.get("DB_PORT", ""),
         "OPTIONS": {
             "charset": "utf8mb4",
-            "init_command": "SET sql_mode='STRICT_TRANS_TABLES'",
-        },
+        } if os.environ.get("DB_ENGINE") else {},
     }
 }
+
 
 # PASSWORDS
 AUTH_PASSWORD_VALIDATORS = [

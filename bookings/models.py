@@ -134,6 +134,17 @@ class Booking(models.Model):
     def __str__(self):
         return f"Booking#{self.pk} {self.service.title} for {self.given_name} {self.surname}"
 
+    def mark_paid(self):
+        """
+        The ONLY allowed way to mark a booking as paid + confirmed.
+        This must be called ONLY by Transaction logic.
+        """
+        if self.payment_status == self.PAYMENT_PAID:
+            return
+
+        self.payment_status = self.PAYMENT_PAID
+        self.status = self.STATUS_CONFIRMED
+        self.save(update_fields=["payment_status", "status", "updated_at"])
 
 class Notification(models.Model):
     """
