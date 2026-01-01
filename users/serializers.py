@@ -8,10 +8,7 @@ User = get_user_model()
 
 
 class OperatorRegisterSerializer(serializers.ModelSerializer):
-    username = serializers.CharField(
-        required=False,
-        allow_blank=True
-    )
+    username = serializers.CharField(required=True)
     password = serializers.CharField(write_only=True, min_length=6)
 
     class Meta:
@@ -23,20 +20,14 @@ class OperatorRegisterSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("Email already registered.")
         return value
 
+    def validate_username(self, value):
+        if User.objects.filter(username=value).exists():
+            raise serializers.ValidationError("Username already taken.")
+        return value
+
     def create(self, validated_data):
-        username = validated_data.get('username')
-
-        # ✅ Auto-generate username if missing or empty
-        if not username:
-            base = validated_data['email'].split('@')[0]
-            username = base
-            counter = 1
-            while User.objects.filter(username=username).exists():
-                username = f"{base}{counter}"
-                counter += 1
-
         user = User.objects.create_user(
-            username=username,
+            username=validated_data['username'],
             email=validated_data['email'],
             phone_number=validated_data.get('phone_number'),
             role=User.ROLE_OPERATOR,

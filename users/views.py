@@ -10,7 +10,7 @@ from rest_framework.decorators import action
 from .models import SupplierProfile
 from .permissions import IsOperator, IsVerifiedOperator, IsOwnerOrAdmin
 
-from rest_framework.parsers import MultiPartParser, FormParser
+from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
 
 
 
@@ -63,7 +63,7 @@ class SupplierProfileViewSet(viewsets.ModelViewSet):
     queryset = SupplierProfile.objects.all()
     serializer_class = SupplierProfileSerializer
     permission_classes = [permissions.IsAuthenticated, IsOperator, IsOwnerOrAdmin]
-    parser_classes = (MultiPartParser, FormParser)  # <-- enables file uploads
+    parser_classes = (JSONParser, MultiPartParser, FormParser)
 
     def get_permissions(self):
         if self.action == 'create':
