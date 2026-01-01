@@ -1,47 +1,37 @@
 from rest_framework import permissions
 
 
-class ServicePermission(permissions.BasePermission):
-    """
-    Services Permission Rules:
+from rest_framework.permissions import BasePermission, SAFE_METHODS
 
-    READ (GET):
-    - Public users can read active services only
-    - Operators can read their own services
-    - Admin can read all services
 
-    WRITE (POST, PUT, PATCH, DELETE):
-    - Operators can manage ONLY their own services
-    - Admin can manage ALL services
-    """
+class ServicePermission(BasePermission):
 
     def has_permission(self, request, view):
-        # READ access (public)
-        if request.method in permissions.SAFE_METHODS:
+        # Always allow OPTIONS
+        if request.method == "OPTIONS":
             return True
 
-        # WRITE access
+        # Public can read
+        if request.method in SAFE_METHODS:
+            return True
+
+        # Must be authenticated to write
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # Admin override
-        if request.user.is_staff or request.user.is_superuser:
-            return True
-
-        # Operator only
-        return getattr(request.user, "role", None) == "operator"
+        # Operators & admins can create
+        return request.user.is_staff or getattr(request.user, "role", None) == "operator"
 
     def has_object_permission(self, request, view, obj):
-        # READ access
-        if request.method in permissions.SAFE_METHODS:
+        if request.method in SAFE_METHODS:
             return True
 
-        # Admin override
-        if request.user.is_staff or request.user.is_superuser:
-            return True
+        return (
+            request.user.is_staff
+            or request.user.is_superuser
+            or obj.operator == request.user
+        )
 
-        # Operator owns the service
-        return getattr(obj, "operator_id", None) == request.user.id
 
 class PackagePermission(permissions.BasePermission):
     """
