@@ -11,7 +11,7 @@ from .models import SupplierProfile
 from .permissions import IsOperator, IsVerifiedOperator, IsOwnerOrAdmin
 
 from rest_framework.parsers import MultiPartParser, FormParser, JSONParser
-
+from drf_spectacular.utils import extend_schema
 
 
 
@@ -22,23 +22,39 @@ def index(request):
 class OperatorRegisterView(APIView):
     """
     POST /api/users/operators/signup/
-    Register a new operator (requires phone_number).
+    Register a new operator.
     Account stays inactive until admin verifies.
     """
+
+    @extend_schema(
+        request=OperatorRegisterSerializer,
+        responses={
+            201: OperatorRegisterSerializer,
+            400: dict,
+        },
+        description=(
+            "Register a new tour operator.\n\n"
+            "**Required fields:** username, email, password, phone_number\n\n"
+            "The account will remain inactive until approved by an admin."
+        ),
+    )
     def post(self, request):
         serializer = OperatorRegisterSerializer(data=request.data)
         if serializer.is_valid():
             user = serializer.save()
-            return Response({
-                "message": "Operator registered successfully. Awaiting admin approval.",
-                "operator": {
-                    "username": user.username,
-                    "email": user.email,
-                    "role": user.role,
-                    "is_verified": user.is_verified,
-                    "phone_number": user.phone_number
-                }
-            }, status=status.HTTP_201_CREATED)
+            return Response(
+                {
+                    "message": "Operator registered successfully. Awaiting admin approval.",
+                    "operator": {
+                        "username": user.username,
+                        "email": user.email,
+                        "role": user.role,
+                        "is_verified": user.is_verified,
+                        "phone_number": user.phone_number,
+                    },
+                },
+                status=status.HTTP_201_CREATED,
+            )
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
 
