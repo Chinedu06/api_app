@@ -1,37 +1,47 @@
 from rest_framework import permissions
 
 
-from rest_framework.permissions import BasePermission, SAFE_METHODS
+class ServicePermission(permissions.BasePermission):
+    """
+    Services Permission Rules:
 
+    READ (GET):
+    - Public users can read active services only
+    - Operators can read their own services
+    - Admin can read all services
 
-class ServicePermission(BasePermission):
+    WRITE (POST, PUT, PATCH, DELETE):
+    - Operators can manage ONLY their own services
+    - Admin can manage ALL services
+    """
 
     def has_permission(self, request, view):
-        # Always allow OPTIONS
-        if request.method == "OPTIONS":
+        # READ access (public)
+        if request.method in permissions.SAFE_METHODS:
             return True
 
-        # Public can read
-        if request.method in SAFE_METHODS:
-            return True
-
-        # Must be authenticated to write
+        # WRITE access
         if not request.user or not request.user.is_authenticated:
             return False
 
-        # Operators & admins can create
-        return request.user.is_staff or getattr(request.user, "role", None) == "operator"
-
-    def has_object_permission(self, request, view, obj):
-        if request.method in SAFE_METHODS:
+        # Admin override
+        if request.user.is_staff or request.user.is_superuser:
             return True
 
-        return (
-            request.user.is_staff
-            or request.user.is_superuser
-            or obj.operator == request.user
-        )
+        # Operator only
+        return getattr(request.user, "role", None) == "operator"
 
+    def has_object_permission(self, request, view, obj):
+        # READ access
+        if request.method in permissions.SAFE_METHODS:
+            return True
+
+        # Admin override
+        if request.user.is_staff or request.user.is_superuser:
+            return True
+
+        # Operator owns the service
+        return getattr(obj, "operator_id", None) == request.user.id
 
 class PackagePermission(permissions.BasePermission):
     """

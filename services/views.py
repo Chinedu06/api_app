@@ -4,6 +4,7 @@ from rest_framework.response import Response
 from .models import Service, Package
 from .serializers import ServiceSerializer, PackageSerializer
 from .permissions import ServicePermission, PackagePermission
+from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -15,6 +16,8 @@ class ServiceViewSet(viewsets.ModelViewSet):
     - Admin: full access
     """
 
+    authentication_classes = [JWTAuthentication]
+    permission_classes = [ServicePermission]
     serializer_class = ServiceSerializer
     permission_classes = [ServicePermission]
     lookup_field = "slug"  # 🔑 KEEP SLUG BEHAVIOR
