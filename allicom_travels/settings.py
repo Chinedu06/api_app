@@ -116,6 +116,11 @@ STATIC_ROOT = "/home/allicomt/domains/api.allicomtourism.com/public_html/static"
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
+# UPLOAD HARD LIMITS (GLOBAL SAFETY)
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024      # 10MB
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024      # 10MB
+
+
 # CUSTOM USER MODEL
 AUTH_USER_MODEL = "users.User"
 
@@ -142,6 +147,16 @@ REST_FRAMEWORK = {
     },
 
     "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
+
+    "DEFAULT_THROTTLE_CLASSES": [
+        "rest_framework.throttling.AnonRateThrottle",
+        "rest_framework.throttling.UserRateThrottle",
+    ],
+
+    "DEFAULT_THROTTLE_RATES": {
+        "anon": "100/hour",
+        "user": "1000/hour",
+    },
 }
 
 

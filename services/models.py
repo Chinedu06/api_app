@@ -1,7 +1,20 @@
+import uuid
+import os
 from django.conf import settings
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils.text import slugify
+
+def service_image_upload_path(instance, filename):
+    ext = filename.split(".")[-1]
+    filename = f"{uuid.uuid4()}.{ext}"
+    return os.path.join("services/images/", filename)
+
+
+def service_document_upload_path(instance, filename):
+    ext = filename.split(".")[-1]
+    filename = f"{uuid.uuid4()}.{ext}"
+    return os.path.join("services/documents/", filename)
 
 class Service(models.Model):
     """
@@ -81,13 +94,27 @@ class Service(models.Model):
 
 
 class ServiceImage(models.Model):
-    """Allows up to 4 images per Service"""
-    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='images')
-    image = models.ImageField(upload_to='service_images/')
+    """
+    Images for a service (JPEG, PNG, WEBP only)
+    """
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="images")
+    image = models.ImageField(upload_to=service_image_upload_path)
     uploaded_at = models.DateTimeField(auto_now_add=True)
 
     def __str__(self):
         return f"Image for {self.service.title}"
+
+
+class ServiceDocument(models.Model):
+    """
+    Optional documents (PDF, TXT)
+    """
+    service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name="documents")
+    file = models.FileField(upload_to=service_document_upload_path)
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"Document for {self.service.title}"
 
 
 class Package(models.Model):
