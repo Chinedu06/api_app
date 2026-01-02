@@ -8,6 +8,7 @@ from rest_framework_simplejwt.authentication import JWTAuthentication
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
+    http_method_names = ["get", "post", "put", "patch", "delete", "options", "head"]
     """
     Services (Tours)
 
