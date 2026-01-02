@@ -9,6 +9,27 @@ class ServiceImageSerializer(serializers.ModelSerializer):
     class Meta:
         model = ServiceImage
         fields = ["id", "image", "uploaded_at"]
+        read_only_fields = ["id", "uploaded_at"]
+
+    def validate_image(self, image):
+        # ✅ File size (max 5MB)
+        max_size = 5 * 1024 * 1024
+        if image.size > max_size:
+            raise serializers.ValidationError("Image size must be under 5MB.")
+
+        # ✅ Allowed MIME types
+        allowed_types = [
+            "image/jpeg",
+            "image/png",
+            "image/webp",
+        ]
+        if image.content_type not in allowed_types:
+            raise serializers.ValidationError(
+                "Only JPG, PNG, and WEBP images are allowed."
+            )
+
+        return image
+
 
 
 # ---------------------------------------------------

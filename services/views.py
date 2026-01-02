@@ -7,6 +7,13 @@ from .serializers import ServiceSerializer, PackageSerializer
 from .permissions import ServicePermission, PackagePermission
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
+from rest_framework.decorators import action
+from rest_framework.permissions import IsAuthenticated
+from django.shortcuts import get_object_or_404
+from .models import ServiceImage
+from .serializers import ServiceImageSerializer
+
+
 
 class ServiceViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "put", "patch", "delete", "options", "head"]
@@ -39,6 +46,41 @@ class ServiceViewSet(viewsets.ModelViewSet):
             {"detail": "Service deactivated successfully."},
             status=status.HTTP_204_NO_CONTENT,
         )
+    
+    @action(
+        detail=True,
+        methods=["get", "post"],
+        permission_classes=[IsAuthenticated],
+        url_path="images",
+    )
+    def images(self, request, slug=None):
+        service = self.get_object()
+
+        # 🔒 Operators can only upload to their own service
+        if request.method == "POST":
+            if (
+                not request.user.is_staff
+                and service.operator != request.user
+            ):
+                return Response(
+                    {"detail": "You do not own this service."},
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+            serializer = ServiceImageSerializer(
+                data=request.data,
+                context={"request": request},
+            )
+            serializer.is_valid(raise_exception=True)
+            serializer.save(service=service)
+
+            return Response(serializer.data, status=status.HTTP_201_CREATED)
+
+        # GET → list images
+        images = service.images.all()
+        serializer = ServiceImageSerializer(images, many=True)
+        return Response(serializer.data)
+
 
 
 class PackageViewSet(viewsets.ModelViewSet):
