@@ -16,10 +16,9 @@ class ServiceViewSet(viewsets.ModelViewSet):
     - Operators: create & manage their own services
     - Admin: full access
     """
-
-    authentication_classes = [JWTAuthentication]
-    permission_classes = [ServicePermission]
+    
     serializer_class = ServiceSerializer
+    authentication_classes = [JWTAuthentication]
     permission_classes = [ServicePermission]
     lookup_field = "slug"  # 🔑 KEEP SLUG BEHAVIOR
 
