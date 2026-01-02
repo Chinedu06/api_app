@@ -4,7 +4,7 @@ from .views import ServiceViewSet, PackageViewSet
 app_name = "services"
 
 router = DefaultRouter()
-router.register(r"services", ServiceViewSet, basename="service")
+router.register(r"", ServiceViewSet, basename="service")          # 👈 root
 router.register(r"packages", PackageViewSet, basename="package")
 
 urlpatterns = router.urls
