@@ -1,26 +1,46 @@
-- name: Deploy to server
-  run: |
-    ssh -o StrictHostKeyChecking=no \
-    ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
+name: Deploy Django API
 
-    cd /home/allicomt/domains/api.allicomtourism.com/api_app
+on:
+  push:
+    branches:
+      - main
 
-    echo "Pulling latest code..."
-    git pull origin main
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
 
-    echo "Activating virtualenv..."
-    source /home/allicomt/virtualenv/api_app/3.11/bin/activate
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
-    echo "Installing requirements..."
-    pip install -r requirements.txt
+      - name: Setup SSH
+        uses: webfactory/ssh-agent@v0.9.0
+        with:
+          ssh-private-key: ${{ secrets.SERVER_SSH_KEY }}
 
-    echo "Running migrations..."
-    python manage.py migrate --noinput
+      - name: Deploy to server
+        run: |
+          ssh -o StrictHostKeyChecking=no \
+          ${{ secrets.SERVER_USER }}@${{ secrets.SERVER_HOST }} << 'EOF'
 
-    echo "Collecting static files..."
-    python manage.py collectstatic --noinput
+          cd /home/allicomt/domains/api.allicomtourism.com/api_app
 
-    echo "Restarting application..."
-    touch tmp/restart.txt
+          echo "Pulling latest code..."
+          git pull origin main
 
-    EOF
+          echo "Activating virtualenv..."
+          source /home/allicomt/virtualenv/api_app/3.11/bin/activate
+
+          echo "Installing requirements..."
+          pip install -r requirements.txt
+
+          echo "Running migrations..."
+          python manage.py migrate --noinput
+
+          echo "Collecting static files..."
+          python manage.py collectstatic --noinput
+
+          echo "Restarting application..."
+          touch tmp/restart.txt
+
+          EOF

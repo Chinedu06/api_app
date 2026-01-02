@@ -162,19 +162,28 @@ CSRF_TRUSTED_ORIGINS = [
     "https://www.api.allicomtourism.com",
 ]
 
+# SPECTACULAR_SETTINGS = {
+#     "TITLE": "Allicom Tourism API",
+#     "DESCRIPTION": "Backend API for Allicom Tourism & Travel Services",
+#     "VERSION": "1.0.0",
+
+#     "SERVE_INCLUDE_SCHEMA": False,
+
+#     # 👇 THIS IS THE IMPORTANT PART
+#     "DEFAULT_GENERATOR_CLASS": "drf_spectacular.generators.SchemaGenerator",
+
+#     "SECURITY": [
+#         {
+#             "bearerAuth": [],
+#         }
+#     ],
+# }
+
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Allicom Tourism API",
-    "DESCRIPTION": "Backend API for Allicom Tourism & Travel Services",
+    "TITLE": "Allicom Travels API",
+    "DESCRIPTION": "API documentation for Allicom Travels",
     "VERSION": "1.0.0",
-
-    "SERVE_INCLUDE_SCHEMA": False,
-
-    # 👇 THIS IS THE IMPORTANT PART
-    "DEFAULT_GENERATOR_CLASS": "drf_spectacular.generators.SchemaGenerator",
-
-    "SECURITY": [
-        {
-            "bearerAuth": [],
-        }
-    ],
+    "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
+    "SERVE_AUTHENTICATION": [],
 }
+
