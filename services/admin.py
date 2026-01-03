@@ -21,11 +21,16 @@ class ServiceAdmin(admin.ModelAdmin):
     list_filter = ("is_active", "is_approved", "created_at")
     search_fields = ("title", "operator__email", "slug", "description")
     ordering = ("-created_at",)
-    readonly_fields = ("operator", "slug", "created_at")
+    readonly_fields = ("slug", "created_at")
 
     actions = ["approve_services", "reject_services"]
 
     inlines = [ServiceImageInline]
+
+    # def save_model(self, request, obj, form, change):
+    #     if not change and not obj.operator:
+    #         obj.operator = request.user
+    #     super().save_model(request, obj, form, change)
 
     def approve_services(self, request, queryset):
         queryset.update(is_approved=True)

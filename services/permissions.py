@@ -34,7 +34,7 @@ class ServicePermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         # READ access
         if request.method in permissions.SAFE_METHODS:
-            return True
+            return obj.is_active and obj.is_approved
 
         # Admin override
         if request.user.is_staff or request.user.is_superuser:

@@ -58,7 +58,6 @@ class ServiceImageSerializer(serializers.ModelSerializer):
 
 
 
-
 # ---------------------------------------------------
 # PACKAGE SERIALIZER (FIXED TO MATCH MODEL)
 # ---------------------------------------------------
