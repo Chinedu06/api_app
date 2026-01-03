@@ -8,11 +8,10 @@ from .permissions import ServicePermission, PackagePermission
 from rest_framework_simplejwt.authentication import JWTAuthentication
 
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from django.shortcuts import get_object_or_404
 from .models import ServiceImage
 from .serializers import ServiceImageSerializer
-
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -80,6 +79,37 @@ class ServiceViewSet(viewsets.ModelViewSet):
         images = service.images.all()
         serializer = ServiceImageSerializer(images, many=True)
         return Response(serializer.data)
+    
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsAdminUser],
+        url_path="approve",
+    )
+    def approve(self, request, slug=None):
+        service = self.get_object()
+        service.is_approved = True
+        service.save(update_fields=["is_approved"])
+        return Response(
+            {"detail": "Service approved successfully."},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsAdminUser],
+        url_path="reject",
+    )
+    def reject(self, request, slug=None):
+        service = self.get_object()
+        service.is_approved = False
+        service.save(update_fields=["is_approved"])
+        return Response(
+            {"detail": "Service rejected."},
+            status=status.HTTP_200_OK,
+        )
+
 
 
 
