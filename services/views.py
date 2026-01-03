@@ -12,6 +12,8 @@ from rest_framework.permissions import IsAuthenticated,IsAdminUser
 from django.shortcuts import get_object_or_404
 from .models import ServiceImage
 from .serializers import ServiceImageSerializer
+from drf_spectacular.utils import extend_schema
+
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -45,6 +47,20 @@ class ServiceViewSet(viewsets.ModelViewSet):
             {"detail": "Service deactivated successfully."},
             status=status.HTTP_204_NO_CONTENT,
         )
+    
+    @extend_schema(
+        request={
+            "multipart/form-data": {
+                "type": "object",
+                "properties": {
+                    "image": {"type": "string", "format": "binary"}
+                },
+                "required": ["image"],
+            }
+        },
+        responses=ServiceImageSerializer,
+    )
+
     
     @action(
         detail=True,
@@ -131,3 +147,4 @@ class PackageViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save()
+
