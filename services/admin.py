@@ -2,11 +2,29 @@ from django.contrib import admin
 from .models import Service, Package
 from django.contrib import admin
 from .models import Service, ServiceImage, Package
+from .models import (
+    Service,
+    ServiceImage,
+    Package,
+    ServiceAvailability,
+    ServiceTimeSlot,
+)
+
 
 class ServiceImageInline(admin.TabularInline):
     model = ServiceImage
     extra = 1
     readonly_fields = ("uploaded_at",)
+
+class ServiceTimeSlotInline(admin.TabularInline):
+    model = ServiceTimeSlot
+    extra = 1
+
+
+class ServiceAvailabilityInline(admin.StackedInline):
+    model = ServiceAvailability
+    extra = 1
+
 
 @admin.register(Service)
 class ServiceAdmin(admin.ModelAdmin):
@@ -25,7 +43,12 @@ class ServiceAdmin(admin.ModelAdmin):
 
     actions = ["approve_services", "reject_services"]
 
-    inlines = [ServiceImageInline]
+    inlines = [
+        ServiceImageInline,
+        ServiceAvailabilityInline,
+        # ServiceTimeSlotInline,
+    ]
+
 
     # def save_model(self, request, obj, form, change):
     #     if not change and not obj.operator:
@@ -50,6 +73,13 @@ class ServiceAdmin(admin.ModelAdmin):
 
     reject_services.short_description = "Reject selected services"
 
+
+@admin.register(ServiceAvailability)
+class ServiceAvailabilityAdmin(admin.ModelAdmin):
+    list_display = ("service", "start_date", "end_date", "is_active")
+    list_filter = ("is_active", "start_date")
+    search_fields = ("service__title",)
+    inlines = [ServiceTimeSlotInline]
 
 
 @admin.register(Package)

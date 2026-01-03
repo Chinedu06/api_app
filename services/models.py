@@ -116,6 +116,63 @@ class ServiceDocument(models.Model):
     def __str__(self):
         return f"Document for {self.service.title}"
 
+class ServiceAvailability(models.Model):
+    """
+    Defines WHEN a service runs (date range + optional weekdays).
+    Does NOT handle time-of-day or capacity.
+    """
+    service = models.ForeignKey(
+        Service,
+        on_delete=models.CASCADE,
+        related_name="availabilities"
+    )
+
+    start_date = models.DateField()
+    end_date = models.DateField()
+
+    # Optional weekday restriction
+    available_days = models.JSONField(
+        default=list,
+        blank=True,
+        help_text="Restrict to weekdays e.g. ['Monday', 'Friday']"
+    )
+
+    is_active = models.BooleanField(default=True)
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ("start_date",)
+
+    def __str__(self):
+        return f"{self.service.title} ({self.start_date} → {self.end_date})"
+
+
+class ServiceTimeSlot(models.Model):
+    """
+    Defines WHAT TIME a service runs on a given available date.
+    Handles capacity and booking limits.
+    """
+    availability = models.ForeignKey(
+        ServiceAvailability,
+        on_delete=models.CASCADE,
+        related_name="time_slots"
+    )
+
+    start_time = models.TimeField()
+    end_time = models.TimeField()
+    capacity = models.PositiveIntegerField(
+        validators=[MinValueValidator(1)]
+    )
+
+    is_active = models.BooleanField(default=True)
+
+    class Meta:
+        ordering = ("start_time",)
+
+    def __str__(self):
+        return f"{self.start_time} - {self.end_time}"
+
+
 
 class Package(models.Model):
     """

@@ -125,6 +125,18 @@ class ServiceViewSet(viewsets.ModelViewSet):
             {"detail": "Service rejected."},
             status=status.HTTP_200_OK,
         )
+    
+    @action(
+        detail=True,
+        methods=["get"],
+        url_path="availability",
+    )
+    def availability(self, request, slug=None):
+        service = self.get_object()
+        availabilities = service.availabilities.filter(is_active=True)
+        serializer = ServiceAvailabilitySerializer(availabilities, many=True)
+        return Response(serializer.data)
+
 
 
 
