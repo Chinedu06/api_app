@@ -6,11 +6,13 @@ from .models import Booking, Notification
 from payments.models import Payment
 
 
+
 @admin.register(Booking)
 class BookingAdmin(admin.ModelAdmin):
     list_display = (
         "id",
         "service",
+        "time_slot",
         "user",
         "status",
         "payment_status",

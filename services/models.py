@@ -4,6 +4,8 @@ from django.conf import settings
 from django.db import models
 from django.core.validators import MinValueValidator
 from django.utils.text import slugify
+from django.core.exceptions import ValidationError
+
 
 def service_image_upload_path(instance, filename):
     ext = filename.split(".")[-1]
@@ -145,6 +147,29 @@ class ServiceAvailability(models.Model):
 
     def __str__(self):
         return f"{self.service.title} ({self.start_date} → {self.end_date})"
+
+    def clean(self):
+        """
+        Prevent overlapping availability ranges for the same service.
+        """
+        overlapping = ServiceAvailability.objects.filter(
+            service=self.service,
+            is_active=True,
+        ).exclude(pk=self.pk).filter(
+            start_date__lte=self.end_date,
+            end_date__gte=self.start_date,
+        )
+
+        if overlapping.exists():
+            raise ValidationError(
+                "This availability overlaps with an existing availability range."
+            )
+        
+    def save(self, *args, **kwargs):
+        self.clean()
+        super().save(*args, **kwargs)
+
+
 
 
 class ServiceTimeSlot(models.Model):

@@ -1,7 +1,12 @@
 from rest_framework import serializers
 from .models import Booking, Notification
 from services.models import Package, Service
+from services.models import ServiceTimeSlot
 
+class ServiceTimeSlotMiniSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = ServiceTimeSlot
+        fields = ["id", "start_time", "end_time"]
 
 class BookingSerializer(serializers.ModelSerializer):
     """
@@ -11,6 +16,14 @@ class BookingSerializer(serializers.ModelSerializer):
 
     service_title = serializers.CharField(source="service.title", read_only=True)
     package_name = serializers.CharField(source="package.name", read_only=True)
+    time_slot = ServiceTimeSlotMiniSerializer(read_only=True)
+    time_slot_id = serializers.PrimaryKeyRelatedField(
+        queryset=ServiceTimeSlot.objects.all(),
+        source="time_slot",
+        write_only=True,
+        required=False
+    )
+
 
     class Meta:
         model = Booking
@@ -49,6 +62,9 @@ class BookingSerializer(serializers.ModelSerializer):
             # Timestamps
             "created_at",
             "updated_at",
+
+            "time_slot",
+            "time_slot_id",
         ]
         read_only_fields = (
             "status",
@@ -111,3 +127,5 @@ class NotificationSerializer(serializers.ModelSerializer):
             "created_at",
         ]
         read_only_fields = ("created_at",)
+
+

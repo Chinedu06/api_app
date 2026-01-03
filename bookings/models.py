@@ -2,9 +2,21 @@ from django.db import models
 from django.conf import settings
 from services.models import Service, Package
 from django.utils import timezone
+from services.models import ServiceTimeSlot
+
 
 
 class Booking(models.Model):
+
+    time_slot = models.ForeignKey(
+        ServiceTimeSlot,
+        on_delete=models.PROTECT,
+        null=True,
+        blank=True,
+        related_name="bookings",
+        help_text="Specific time slot booked"
+    )
+
     """
     RESTORED Booking model with full travel details, package selection,
     traveler info, dates, and admin workflow.
@@ -18,6 +30,7 @@ class Booking(models.Model):
     STATUS_CONFIRMED = 'confirmed'
     STATUS_CANCELLED = 'cancelled'
     STATUS_REJECTED = 'rejected'
+
 
     STATUS_CHOICES = [
         (STATUS_PENDING, 'Pending'),
