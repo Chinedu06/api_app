@@ -14,6 +14,11 @@ from .models import ServiceImage
 from .serializers import ServiceImageSerializer
 from drf_spectacular.utils import extend_schema
 
+from datetime import timedelta
+from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
+from .models import Service
+
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -138,9 +143,6 @@ class ServiceViewSet(viewsets.ModelViewSet):
         return Response(serializer.data)
 
 
-
-
-
 class PackageViewSet(viewsets.ModelViewSet):
     serializer_class = PackageSerializer
     permission_classes = [PackagePermission]
@@ -160,3 +162,51 @@ class PackageViewSet(viewsets.ModelViewSet):
     def perform_create(self, serializer):
         serializer.save()
 
+
+
+class ServiceCalendarView(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request, slug):
+        service = get_object_or_404(Service, slug=slug, is_active=True)
+
+        calendar = {}
+
+        availabilities = service.availabilities.filter(is_active=True)
+
+        for availability in availabilities:
+            current_date = availability.start_date
+
+            while current_date <= availability.end_date:
+                weekday = current_date.strftime("%A")
+
+                # Respect weekday restrictions if set
+                if availability.available_days and weekday not in availability.available_days:
+                    current_date += timedelta(days=1)
+                    continue
+
+                date_key = current_date.isoformat()
+                calendar.setdefault(date_key, [])
+
+                for slot in availability.time_slots.filter(is_active=True):
+                    remaining = slot.seats_remaining()
+
+                    calendar[date_key].append({
+                        "time_slot_id": slot.id,
+                        "start_time": slot.start_time.strftime("%H:%M"),
+                        "end_time": slot.end_time.strftime("%H:%M"),
+                        "capacity": slot.capacity,
+                        "remaining": remaining,
+                        "available": remaining > 0,
+                    })
+
+                current_date += timedelta(days=1)
+
+        return Response({
+            "service": {
+                "id": service.id,
+                "title": service.title,
+                "slug": service.slug,
+            },
+            "calendar": calendar
+        })
