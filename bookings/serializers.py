@@ -82,6 +82,7 @@ class BookingSerializer(serializers.ModelSerializer):
     def validate(self, attrs):
         service = attrs.get("service") or self.instance.service
         package = attrs.get("package")
+        time_slot = attrs.get("time_slot")
 
         # Make sure the package belongs to the service
         if package and package.service_id != service.id:
@@ -96,6 +97,26 @@ class BookingSerializer(serializers.ModelSerializer):
         if start and end and end < start:
             raise serializers.ValidationError(
                 {"end_date": "End date cannot be before start date."}
+            )
+
+        if time_slot:
+            adults = attrs.get("num_adults", 0)
+            children = attrs.get("num_children", 0)
+            requested_seats = adults + children
+
+        if requested_seats <= 0:
+            raise serializers.ValidationError(
+                {"num_adults": "At least one traveler is required."}
+            )
+
+        if time_slot.seats_remaining() < requested_seats:
+            raise serializers.ValidationError(
+                {
+                    "time_slot_id": (
+                        "Not enough capacity for this time slot. "
+                        f"{time_slot.seats_remaining()} seats remaining."
+                    )
+                }
             )
 
         return attrs
