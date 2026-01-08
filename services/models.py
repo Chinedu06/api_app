@@ -150,25 +150,27 @@ class ServiceAvailability(models.Model):
         return f"{self.service.title} ({self.start_date} → {self.end_date})"
 
     def clean(self):
-        """
-        Prevent overlapping availability ranges for the same service.
-        """
+        if not self.service_id:
+            return
+
         overlapping = ServiceAvailability.objects.filter(
-            service=self.service,
-            is_active=True,
-        ).exclude(pk=self.pk).filter(
+            service_id=self.service_id,
             start_date__lte=self.end_date,
             end_date__gte=self.start_date,
         )
 
+        if self.pk:
+            overlapping = overlapping.exclude(pk=self.pk)
+
         if overlapping.exists():
             raise ValidationError(
-                "This availability overlaps with an existing availability range."
+                "Availability dates overlap with an existing availability."
             )
-        
-    def save(self, *args, **kwargs):
-        self.clean()
-        super().save(*args, **kwargs)
+
+            
+        def save(self, *args, **kwargs):
+            self.clean()
+            super().save(*args, **kwargs)
 
 
 
