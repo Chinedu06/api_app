@@ -197,16 +197,14 @@ class ServiceTimeSlot(models.Model):
 
     def __str__(self):
         return f"{self.start_time} - {self.end_time}"
-    
+
     def seats_remaining(self):
-        """
-        Returns remaining seats for this time slot,
-        considering pending + confirmed bookings.
-        """
         booked = self.bookings.filter(
             status__in=["pending", "confirmed"]
         ).aggregate(
-            total=Sum("num_adults") + Sum("num_children")
+            total=(
+                Sum("num_adults") + Sum("num_children")
+            )
         )["total"] or 0
 
         return max(self.capacity - booked, 0)

@@ -18,6 +18,7 @@ from datetime import timedelta
 from rest_framework.views import APIView
 from rest_framework.permissions import AllowAny
 from .models import Service
+from .serializers import ServiceAvailabilitySerializer
 
 
 
