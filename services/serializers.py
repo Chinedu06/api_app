@@ -107,24 +107,39 @@ class PackageSerializer(serializers.ModelSerializer):
 # SERVICE SERIALIZER (TOP-LEVEL)
 # ---------------------------------------------------
 class ServiceSerializer(serializers.ModelSerializer):
-    packages = PackageSerializer(many=True, read_only=True)
+    packages = serializers.SerializerMethodField()
     images = ServiceImageSerializer(many=True, read_only=True)
-    images_count = serializers.IntegerField(read_only=True)
+    images_count = serializers.SerializerMethodField()
     availabilities = ServiceAvailabilitySerializer(many=True, read_only=True)
 
     class Meta:
         model = Service
         fields = [
             "id",
+            "category",
+            "city",
+            "country",
             "title",
             "slug",
             "description",
             "price",
             "duration_hours",
+            "min_age",
             "available_days",
             "is_active",
+            "is_approved",
             "images",
             "images_count",
             "packages",
             "availabilities",
         ]
+
+    def get_images_count(self, obj):
+        return obj.images.count()
+
+    def get_packages(self, obj):
+        return PackageSerializer(
+            obj.packages.filter(is_active=True),
+            many=True
+        ).data
+

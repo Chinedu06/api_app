@@ -120,10 +120,6 @@ class ServiceDocument(models.Model):
         return f"Document for {self.service.title}"
 
 class ServiceAvailability(models.Model):
-    """
-    Defines WHEN a service runs (date range + optional weekdays).
-    Does NOT handle time-of-day or capacity.
-    """
     service = models.ForeignKey(
         Service,
         on_delete=models.CASCADE,
@@ -133,13 +129,7 @@ class ServiceAvailability(models.Model):
     start_date = models.DateField()
     end_date = models.DateField()
 
-    # Optional weekday restriction
-    available_days = models.JSONField(
-        default=list,
-        blank=True,
-        help_text="Restrict to weekdays e.g. ['Monday', 'Friday']"
-    )
-
+    available_days = models.JSONField(default=list, blank=True)
     is_active = models.BooleanField(default=True)
     created_at = models.DateTimeField(auto_now_add=True)
 
@@ -150,7 +140,8 @@ class ServiceAvailability(models.Model):
         return f"{self.service.title} ({self.start_date} → {self.end_date})"
 
     def clean(self):
-        if not self.service_id:
+        # 🔒 Prevent validation before parent is saved
+        if not self.pk and not self.service_id:
             return
 
         overlapping = ServiceAvailability.objects.filter(
@@ -167,10 +158,9 @@ class ServiceAvailability(models.Model):
                 "Availability dates overlap with an existing availability."
             )
 
-            
-        def save(self, *args, **kwargs):
-            self.clean()
-            super().save(*args, **kwargs)
+    def save(self, *args, **kwargs):
+        self.full_clean()
+        super().save(*args, **kwargs)
 
 
 
