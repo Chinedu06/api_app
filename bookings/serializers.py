@@ -21,7 +21,8 @@ class BookingSerializer(serializers.ModelSerializer):
         queryset=ServiceTimeSlot.objects.all(),
         source="time_slot",
         write_only=True,
-        required=False
+        required=False,
+        allow_null=True
     )
 
 
@@ -79,10 +80,20 @@ class BookingSerializer(serializers.ModelSerializer):
     # VALIDATION
     # ============================================
 
+
+
     def validate(self, attrs):
+
+        time_slot = attrs.get("time_slot")
+        start_date = attrs.get("start_date")
+        end_date = attrs.get("end_date")
         service = attrs.get("service") or self.instance.service
         package = attrs.get("package")
-        time_slot = attrs.get("time_slot")
+
+        if not time_slot and not (start_date and end_date):
+            raise serializers.ValidationError(
+                "Either time_slot_id or start_date & end_date must be provided."
+            )
 
         # Make sure the package belongs to the service
         if package and package.service_id != service.id:
