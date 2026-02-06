@@ -1,25 +1,26 @@
+from datetime import timedelta
+
+from django.shortcuts import get_object_or_404
+from django.db.models import Prefetch
+
 from rest_framework import viewsets, status
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
-
-from .models import Service, Package
-from .serializers import ServiceSerializer, PackageSerializer
-from .permissions import ServicePermission, PackagePermission
-from rest_framework_simplejwt.authentication import JWTAuthentication
-
 from rest_framework.decorators import action
-from rest_framework.permissions import IsAuthenticated,IsAdminUser
-from django.shortcuts import get_object_or_404
-from .models import ServiceImage
-from .serializers import ServiceImageSerializer
+from rest_framework.permissions import IsAuthenticated, IsAdminUser, AllowAny
+from rest_framework.views import APIView
+
+from rest_framework_simplejwt.authentication import JWTAuthentication
 from drf_spectacular.utils import extend_schema
 
-from datetime import timedelta
-from rest_framework.views import APIView
-from rest_framework.permissions import AllowAny
-from .models import Service
-from .serializers import ServiceAvailabilitySerializer
-
+from .models import Service, Package, ServiceImage, ServiceAvailability
+from .serializers import (
+    ServiceSerializer,
+    PackageSerializer,
+    ServiceImageSerializer,
+    ServiceAvailabilitySerializer,
+)
+from .permissions import ServicePermission, PackagePermission
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -34,13 +35,19 @@ class ServiceViewSet(viewsets.ModelViewSet):
     def get_queryset(self):
         user = self.request.user
 
+        qs = Service.objects.all().prefetch_related(
+            "images",
+            "availabilities",
+            Prefetch("packages", queryset=Package.objects.filter(is_active=True)),
+        )
+
         if user.is_authenticated and (user.is_staff or user.is_superuser):
-            return Service.objects.all()
+            return qs
 
         if user.is_authenticated and getattr(user, "role", None) == "operator":
-            return Service.objects.filter(operator=user)
+            return qs.filter(operator=user)
 
-        return Service.objects.filter(is_active=True, is_approved=True)
+        return qs.filter(is_active=True, is_approved=True)
 
     def perform_create(self, serializer):
         serializer.save(operator=self.request.user)
@@ -53,7 +60,7 @@ class ServiceViewSet(viewsets.ModelViewSet):
             {"detail": "Service deactivated successfully."},
             status=status.HTTP_204_NO_CONTENT,
         )
-    
+
     @extend_schema(
         request={
             "multipart/form-data": {
@@ -66,8 +73,6 @@ class ServiceViewSet(viewsets.ModelViewSet):
         },
         responses=ServiceImageSerializer,
     )
-
-    
     @action(
         detail=True,
         methods=["get", "post"],
@@ -79,10 +84,7 @@ class ServiceViewSet(viewsets.ModelViewSet):
 
         # 🔒 Operators can only upload to their own service
         if request.method == "POST":
-            if (
-                not request.user.is_staff
-                and service.operator != request.user
-            ):
+            if (not request.user.is_staff) and (service.operator != request.user):
                 return Response(
                     {"detail": "You do not own this service."},
                     status=status.HTTP_403_FORBIDDEN,
@@ -101,7 +103,7 @@ class ServiceViewSet(viewsets.ModelViewSet):
         images = service.images.all()
         serializer = ServiceImageSerializer(images, many=True)
         return Response(serializer.data)
-    
+
     @action(
         detail=True,
         methods=["post"],
@@ -131,7 +133,7 @@ class ServiceViewSet(viewsets.ModelViewSet):
             {"detail": "Service rejected."},
             status=status.HTTP_200_OK,
         )
-    
+
     @action(
         detail=True,
         methods=["get"],
@@ -162,7 +164,6 @@ class PackageViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         serializer.save()
-
 
 
 class ServiceCalendarView(APIView):

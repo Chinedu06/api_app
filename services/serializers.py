@@ -107,9 +107,17 @@ class PackageSerializer(serializers.ModelSerializer):
 # SERVICE SERIALIZER (TOP-LEVEL)
 # ---------------------------------------------------
 class ServiceSerializer(serializers.ModelSerializer):
-    packages = serializers.SerializerMethodField()
+    # ✅ Card/thumbnail image (industry standard)
+    cover_image = serializers.SerializerMethodField()
+
+    # ✅ Gallery images (detail view)
     images = ServiceImageSerializer(many=True, read_only=True)
     images_count = serializers.SerializerMethodField()
+
+    # ✅ Only active packages (your current rule)
+    packages = serializers.SerializerMethodField()
+
+    # ✅ Availability ranges
     availabilities = ServiceAvailabilitySerializer(many=True, read_only=True)
 
     class Meta:
@@ -128,6 +136,11 @@ class ServiceSerializer(serializers.ModelSerializer):
             "available_days",
             "is_active",
             "is_approved",
+
+            # NEW
+            "cover_image",
+
+            # Existing
             "images",
             "images_count",
             "packages",
@@ -143,3 +156,10 @@ class ServiceSerializer(serializers.ModelSerializer):
             many=True
         ).data
 
+    def get_cover_image(self, obj):
+        """
+        Returns ONE image URL for cards/thumbnails.
+        Picks the earliest uploaded image.
+        """
+        first = obj.images.order_by("uploaded_at").first()
+        return first.image.url if first and first.image else None
