@@ -3,7 +3,7 @@ from datetime import timedelta
 from django.shortcuts import get_object_or_404
 from django.db.models import Prefetch
 
-from rest_framework import viewsets, status
+from rest_framework import viewsets, status, serializers
 from rest_framework.response import Response
 from rest_framework.parsers import MultiPartParser, FormParser
 from rest_framework.decorators import action
@@ -99,7 +99,6 @@ class ServiceViewSet(viewsets.ModelViewSet):
 
             return Response(serializer.data, status=status.HTTP_201_CREATED)
 
-        # GET → list images
         images = service.images.all()
         serializer = ServiceImageSerializer(images, many=True)
         return Response(serializer.data)
@@ -150,6 +149,7 @@ class PackageViewSet(viewsets.ModelViewSet):
     serializer_class = PackageSerializer
     permission_classes = [PackagePermission]
     parser_classes = (MultiPartParser, FormParser)
+    authentication_classes = [JWTAuthentication]
 
     def get_queryset(self):
         user = self.request.user
@@ -163,6 +163,21 @@ class PackageViewSet(viewsets.ModelViewSet):
         return Package.objects.filter(service__is_active=True)
 
     def perform_create(self, serializer):
+        """
+        ✅ Enforce that operators can only add packages to their own services.
+        Also guarantees packages are always attached to a service.
+        """
+        user = self.request.user
+        service = serializer.validated_data.get("service")
+
+        if not service:
+            raise serializers.ValidationError({"service": "This field is required."})
+
+        if getattr(user, "role", None) == "operator" and service.operator_id != user.id:
+            raise serializers.ValidationError(
+                {"service": "You can only add packages to your own services."}
+            )
+
         serializer.save()
 
 
@@ -173,7 +188,6 @@ class ServiceCalendarView(APIView):
         service = get_object_or_404(Service, slug=slug, is_active=True)
 
         calendar = {}
-
         availabilities = service.availabilities.filter(is_active=True)
 
         for availability in availabilities:
@@ -182,7 +196,6 @@ class ServiceCalendarView(APIView):
             while current_date <= availability.end_date:
                 weekday = current_date.strftime("%A")
 
-                # Respect weekday restrictions if set
                 if availability.available_days and weekday not in availability.available_days:
                     current_date += timedelta(days=1)
                     continue

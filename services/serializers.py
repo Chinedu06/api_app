@@ -87,13 +87,19 @@ class ServiceAvailabilitySerializer(serializers.ModelSerializer):
 
 
 # ---------------------------------------------------
-# PACKAGE SERIALIZER
+# PACKAGE SERIALIZER (FIXED)
 # ---------------------------------------------------
 class PackageSerializer(serializers.ModelSerializer):
+    # ✅ Accept service from frontend: "service": 22
+    service = serializers.PrimaryKeyRelatedField(
+        queryset=Service.objects.all()
+    )
+
     class Meta:
         model = Package
         fields = [
             "id",
+            "service",
             "name",
             "description",
             "price",
@@ -137,10 +143,8 @@ class ServiceSerializer(serializers.ModelSerializer):
             "is_active",
             "is_approved",
 
-            # NEW
             "cover_image",
 
-            # Existing
             "images",
             "images_count",
             "packages",
@@ -151,6 +155,7 @@ class ServiceSerializer(serializers.ModelSerializer):
         return obj.images.count()
 
     def get_packages(self, obj):
+        # If viewset already prefetched active packages, this is fast.
         return PackageSerializer(
             obj.packages.filter(is_active=True),
             many=True
