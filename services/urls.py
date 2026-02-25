@@ -11,8 +11,8 @@ urlpatterns = [
 
 # Set up the router
 router = DefaultRouter()
-router.register(r"", ServiceViewSet, basename="service")          # 👈 root
 router.register(r"packages", PackageViewSet, basename="package")
+router.register(r"", ServiceViewSet, basename="service")          # 👈 root
 
 # Add router URLs to urlpatterns
 urlpatterns += router.urls
