@@ -146,6 +146,7 @@ class ServiceViewSet(viewsets.ModelViewSet):
 
 
 class PackageViewSet(viewsets.ModelViewSet):
+    http_method_names = ["get", "post", "put", "patch", "delete", "options", "head"]
     serializer_class = PackageSerializer
     permission_classes = [PackagePermission]
     parser_classes = (MultiPartParser, FormParser)
