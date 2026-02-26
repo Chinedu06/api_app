@@ -12,7 +12,6 @@ from .views import (
 
 app_name = "bookings"
 
-
 urlpatterns = [
     # -------------------------------
     # BOOKINGS
@@ -23,10 +22,6 @@ urlpatterns = [
     path("<int:booking_id>/status/", UpdateBookingStatusView.as_view(), name="booking-update-status"),
     path("<int:id>/guest/", GuestBookingDetailView.as_view(), name="booking-guest-detail"),
     path("operator/", OperatorBookingsView.as_view(), name="booking-operator-list"),
-    path("operator/", OperatorBookingsView.as_view(), name="operator-bookings"),
-
-
-
 
     # -------------------------------
     # NOTIFICATIONS

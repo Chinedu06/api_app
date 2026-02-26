@@ -43,50 +43,78 @@ class MyBookingsView(generics.ListAPIView):
 
 # ============================================================
 # ADMIN — LIST ALL BOOKINGS
-# (Optional, protected by staff permissions)
 # ============================================================
 
 class AllBookingsView(generics.ListAPIView):
     serializer_class = BookingSerializer
     permission_classes = [permissions.IsAdminUser]
-
     queryset = Booking.objects.all().order_by("-created_at")
 
 
 # ============================================================
-# MARK BOOKING AS READ / UPDATE STATUS (ADMIN)
+# UPDATE BOOKING STATUS (OPERATOR OR ADMIN)
 # ============================================================
 
 class UpdateBookingStatusView(APIView):
     """
-    Patch endpoint:
-        POST /api/bookings/<id>/status/
-        { "status": "confirmed" }
+    POST /api/v1/bookings/<id>/status/
+    { "status": "confirmed" | "cancelled" | "rejected" | "pending" }
+
+    ✅ Operator can update status ONLY for bookings on their own services.
+    ✅ Admin can update status for any booking.
+    ❌ This endpoint does NOT touch payment_status (keeps your design safe).
     """
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, booking_id):
-        status_value = request.data.get("status")
+        new_status = request.data.get("status")
 
-        if status_value not in [
+        allowed_statuses = {
             Booking.STATUS_PENDING,
             Booking.STATUS_CONFIRMED,
             Booking.STATUS_CANCELLED,
-        ]:
+            Booking.STATUS_REJECTED,
+        }
+
+        if new_status not in allowed_statuses:
             return Response(
                 {"error": "Invalid status"},
                 status=status.HTTP_400_BAD_REQUEST,
             )
 
         try:
-            booking = Booking.objects.get(id=booking_id)
+            booking = Booking.objects.select_related("service__operator").get(id=booking_id)
         except Booking.DoesNotExist:
             return Response({"error": "Booking not found"}, status=404)
 
-        booking.status = status_value
-        booking.save()
+        user = request.user
+        is_admin = user.is_staff or user.is_superuser
+        is_operator_owner = (
+            getattr(user, "role", None) == "operator"
+            and booking.service.operator_id == user.id
+        )
 
-        return Response({"message": "Booking status updated"})
+        # ✅ Permission gate
+        if not (is_admin or is_operator_owner):
+            return Response(
+                {"detail": "You do not have permission to update this booking."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Optional safety: prevent changing status after cancelled/rejected (if you want)
+        # if is_operator_owner and booking.status in [Booking.STATUS_CANCELLED, Booking.STATUS_REJECTED]:
+        #     return Response(
+        #         {"detail": f"Cannot change status after it is {booking.status}."},
+        #         status=status.HTTP_400_BAD_REQUEST,
+        #     )
+
+        booking.status = new_status
+        booking.save(update_fields=["status", "updated_at"])
+
+        return Response(
+            {"message": "Booking status updated", "status": booking.status},
+            status=status.HTTP_200_OK,
+        )
 
 
 # ============================================================
@@ -108,7 +136,6 @@ class MarkNotificationReadView(APIView):
     """
     POST /api/notifications/<id>/read/
     """
-
     permission_classes = [permissions.IsAuthenticated]
 
     def post(self, request, notif_id):
@@ -118,9 +145,10 @@ class MarkNotificationReadView(APIView):
             return Response({"error": "Not found"}, status=404)
 
         notif.is_read = True
-        notif.save()
+        notif.save(update_fields=["is_read"])
 
         return Response({"message": "Notification marked as read"})
+
 
 class GuestBookingDetailView(generics.RetrieveAPIView):
     """
@@ -140,6 +168,7 @@ class GuestBookingDetailView(generics.RetrieveAPIView):
 
         return Booking.objects.filter(email=email)
 
+
 class OperatorBookingsView(generics.ListAPIView):
     """
     Allows an operator to view bookings
@@ -151,10 +180,7 @@ class OperatorBookingsView(generics.ListAPIView):
     def get_queryset(self):
         user = self.request.user
 
-        # Extra safety check
         if getattr(user, "role", None) != "operator":
             return Booking.objects.none()
 
-        return Booking.objects.filter(
-            service__operator=user
-        ).order_by("-created_at")
+        return Booking.objects.filter(service__operator=user).order_by("-created_at")

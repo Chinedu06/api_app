@@ -6,8 +6,8 @@ class ServicePermission(permissions.BasePermission):
     Services Permission Rules:
 
     READ (GET):
-    - Public users can read active services only
-    - Operators can read their own services
+    - Public users can read only active + approved services
+    - Operators can read their own services (including inactive/unapproved drafts)
     - Admin can read all services
 
     WRITE (POST, PUT, PATCH, DELETE):
@@ -20,7 +20,7 @@ class ServicePermission(permissions.BasePermission):
         if request.method in permissions.SAFE_METHODS:
             return True
 
-        # WRITE access
+        # WRITE access requires authentication
         if not request.user or not request.user.is_authenticated:
             return False
 
@@ -34,8 +34,20 @@ class ServicePermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         # READ access
         if request.method in permissions.SAFE_METHODS:
+            # Admin can view all
+            if request.user and request.user.is_authenticated and (
+                request.user.is_staff or request.user.is_superuser
+            ):
+                return True
+
+            # Operators can view their own services (even if inactive/unapproved)
+            if request.user and request.user.is_authenticated and getattr(request.user, "role", None) == "operator":
+                return getattr(obj, "operator_id", None) == request.user.id
+
+            # Public can only view active + approved
             return obj.is_active and obj.is_approved
 
+        # WRITE access
         # Admin override
         if request.user.is_staff or request.user.is_superuser:
             return True
@@ -43,12 +55,15 @@ class ServicePermission(permissions.BasePermission):
         # Operator owns the service
         return getattr(obj, "operator_id", None) == request.user.id
 
+
 class PackagePermission(permissions.BasePermission):
     """
     Packages Permission Rules:
 
     READ (GET):
-    - Public users can read packages tied to active services
+    - Public users can read packages tied to active + approved services
+    - Operators can read packages under their services (including drafts)
+    - Admin can read all packages
 
     WRITE (POST, PUT, PATCH, DELETE):
     - Operators can manage packages ONLY under their services
@@ -74,8 +89,20 @@ class PackagePermission(permissions.BasePermission):
     def has_object_permission(self, request, view, obj):
         # READ access
         if request.method in permissions.SAFE_METHODS:
-            return True
+            # Admin can view all
+            if request.user and request.user.is_authenticated and (
+                request.user.is_staff or request.user.is_superuser
+            ):
+                return True
 
+            # Operator can view packages under their own services
+            if request.user and request.user.is_authenticated and getattr(request.user, "role", None) == "operator":
+                return obj.service.operator_id == request.user.id
+
+            # Public: only if parent service is active + approved
+            return obj.service.is_active and obj.service.is_approved
+
+        # WRITE access
         # Admin override
         if request.user.is_staff or request.user.is_superuser:
             return True
