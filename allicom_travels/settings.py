@@ -38,7 +38,8 @@ INSTALLED_APPS = [
     "users",
     "services",
     "bookings",
-    "payments",
+    "payments",\
+    "destinations",
 
     "drf_spectacular",
 ]
