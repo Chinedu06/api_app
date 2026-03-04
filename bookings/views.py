@@ -62,7 +62,11 @@ class UpdateBookingStatusView(APIView):
 
     ✅ Operator can update status ONLY for bookings on their own services.
     ✅ Admin can update status for any booking.
-    ❌ This endpoint does NOT touch payment_status (keeps your design safe).
+    ❌ This endpoint does NOT touch payment_status.
+
+    NEW RULE:
+    ✅ Operator can see booking immediately (pending),
+    ❌ but operator cannot CONFIRM until booking.payment_status == PAID.
     """
     permission_classes = [permissions.IsAuthenticated]
 
@@ -74,6 +78,7 @@ class UpdateBookingStatusView(APIView):
             Booking.STATUS_CONFIRMED,
             Booking.STATUS_CANCELLED,
             Booking.STATUS_REJECTED,
+            Booking.STATUS_PAID,  # allow status=paid if admin wants to set it (optional)
         }
 
         if new_status not in allowed_statuses:
@@ -101,12 +106,26 @@ class UpdateBookingStatusView(APIView):
                 status=status.HTTP_403_FORBIDDEN,
             )
 
-        # Optional safety: prevent changing status after cancelled/rejected (if you want)
-        # if is_operator_owner and booking.status in [Booking.STATUS_CANCELLED, Booking.STATUS_REJECTED]:
-        #     return Response(
-        #         {"detail": f"Cannot change status after it is {booking.status}."},
-        #         status=status.HTTP_400_BAD_REQUEST,
-        #     )
+        # ============================================================
+        # NEW GUARD: operator cannot CONFIRM until PAID
+        # ============================================================
+        if is_operator_owner and new_status == Booking.STATUS_CONFIRMED:
+            if booking.payment_status != Booking.PAYMENT_PAID:
+                return Response(
+                    {
+                        "detail": "Cannot confirm booking until payment is marked as PAID.",
+                        "payment_status": booking.payment_status,
+                        "status": booking.status,
+                    },
+                    status=status.HTTP_403_FORBIDDEN,
+                )
+
+        # Optional: you can also block operator from setting status=paid directly
+        if is_operator_owner and new_status == Booking.STATUS_PAID:
+            return Response(
+                {"detail": "Operators cannot mark bookings as PAID. Payment is set by gateway/admin."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
 
         booking.status = new_status
         booking.save(update_fields=["status", "updated_at"])
@@ -162,7 +181,6 @@ class GuestBookingDetailView(generics.RetrieveAPIView):
     def get_queryset(self):
         email = self.request.query_params.get("email")
 
-        # No email → no access
         if not email:
             return Booking.objects.none()
 

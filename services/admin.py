@@ -37,7 +37,7 @@ class ServiceAdmin(admin.ModelAdmin):
         "created_at",
     )
     list_filter = ("is_active", "is_approved", "created_at")
-    search_fields = ("title", "operator__email", "slug", "description")
+    search_fields = ("title", "operator__email", "slug", "description", "tour_inclusive")
     ordering = ("-created_at",)
     readonly_fields = ("slug", "created_at")
 

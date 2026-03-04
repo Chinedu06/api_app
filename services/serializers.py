@@ -90,7 +90,6 @@ class ServiceAvailabilitySerializer(serializers.ModelSerializer):
 # PACKAGE SERIALIZER (FIXED)
 # ---------------------------------------------------
 class PackageSerializer(serializers.ModelSerializer):
-    # ✅ Accept service from frontend: "service": 22
     service = serializers.PrimaryKeyRelatedField(
         queryset=Service.objects.all()
     )
@@ -113,17 +112,13 @@ class PackageSerializer(serializers.ModelSerializer):
 # SERVICE SERIALIZER (TOP-LEVEL)
 # ---------------------------------------------------
 class ServiceSerializer(serializers.ModelSerializer):
-    # ✅ Card/thumbnail image (industry standard)
     cover_image = serializers.SerializerMethodField()
 
-    # ✅ Gallery images (detail view)
     images = ServiceImageSerializer(many=True, read_only=True)
     images_count = serializers.SerializerMethodField()
 
-    # ✅ Only active packages (your current rule)
     packages = serializers.SerializerMethodField()
 
-    # ✅ Availability ranges
     availabilities = ServiceAvailabilitySerializer(many=True, read_only=True)
 
     class Meta:
@@ -135,7 +130,13 @@ class ServiceSerializer(serializers.ModelSerializer):
             "country",
             "title",
             "slug",
+
+            # Existing
             "description",
+
+            # ✅ NEW
+            "tour_inclusive",
+
             "price",
             "duration_hours",
             "min_age",
@@ -155,16 +156,11 @@ class ServiceSerializer(serializers.ModelSerializer):
         return obj.images.count()
 
     def get_packages(self, obj):
-        # If viewset already prefetched active packages, this is fast.
         return PackageSerializer(
             obj.packages.filter(is_active=True),
             many=True
         ).data
 
     def get_cover_image(self, obj):
-        """
-        Returns ONE image URL for cards/thumbnails.
-        Picks the earliest uploaded image.
-        """
         first = obj.images.order_by("uploaded_at").first()
         return first.image.url if first and first.image else None

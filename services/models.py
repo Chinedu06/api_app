@@ -19,6 +19,7 @@ def service_document_upload_path(instance, filename):
     filename = f"{uuid.uuid4()}.{ext}"
     return os.path.join("services/documents/", filename)
 
+
 class Service(models.Model):
     """
     Represents a tour/service uploaded by an operator (Tour Operator).
@@ -54,7 +55,14 @@ class Service(models.Model):
     country = models.CharField(max_length=120)
     title = models.CharField(max_length=200)
     slug = models.SlugField(max_length=255, unique=True, blank=True)
+
+    # Existing
     description = models.TextField()
+
+    # ✅ NEW: Tour inclusive / inclusions text (operator fills during upload)
+    # Kept optional to avoid breaking existing records.
+    tour_inclusive = models.TextField(blank=True, default="")
+
     duration_hours = models.PositiveIntegerField(
         validators=[MinValueValidator(1)],
         null=True,
@@ -119,6 +127,7 @@ class ServiceDocument(models.Model):
     def __str__(self):
         return f"Document for {self.service.title}"
 
+
 class ServiceAvailability(models.Model):
     service = models.ForeignKey(
         Service,
@@ -163,8 +172,6 @@ class ServiceAvailability(models.Model):
         super().save(*args, **kwargs)
 
 
-
-
 class ServiceTimeSlot(models.Model):
     """
     Defines WHAT TIME a service runs on a given available date.
@@ -205,12 +212,6 @@ class ServiceTimeSlot(models.Model):
 class Package(models.Model):
     """
     Package model tied to a Service. Operators create packages under their services.
-    - name: short package name (e.g., "Solo Traveler")
-    - description: optional longer desc
-    - price: package-specific price (overrides service.price if provided)
-    - duration_days: optional override in days
-    - is_active: allow operator to hide package without deleting
-    - created_at/updated_at timestamps in ISO 8601 (Django default)
     """
     service = models.ForeignKey(Service, on_delete=models.CASCADE, related_name='packages')
     name = models.CharField(max_length=120)
