@@ -97,6 +97,20 @@ DATABASES = {
 }
 
 
+# ===========================
+# EMAIL (SendGrid SMTP)
+# ===========================
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = "smtp.sendgrid.net"
+EMAIL_PORT = 587
+EMAIL_USE_TLS = True
+
+# SendGrid SMTP uses "apikey" as username, and your API key as password
+EMAIL_HOST_USER = "apikey"
+EMAIL_HOST_PASSWORD = os.environ.get("SENDGRID_API_KEY")
+
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Allicom Travels <no-reply@allicomtourism.com>")
+
 # PASSWORDS
 AUTH_PASSWORD_VALIDATORS = [
     {"NAME": "django.contrib.auth.password_validation.UserAttributeSimilarityValidator"},

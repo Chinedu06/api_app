@@ -21,6 +21,7 @@ from .serializers import (
     ServiceAvailabilitySerializer,
 )
 from .permissions import ServicePermission, PackagePermission
+from bookings.models import Booking
 
 
 class ServiceViewSet(viewsets.ModelViewSet):
@@ -54,8 +55,27 @@ class ServiceViewSet(viewsets.ModelViewSet):
 
     def destroy(self, request, *args, **kwargs):
         service = self.get_object()
+
+        # Prevent deletion if active bookings exist
+        active_bookings = Booking.objects.filter(
+            service=service,
+            status__in=[
+                Booking.STATUS_PENDING,
+                Booking.STATUS_PAID,
+                Booking.STATUS_CONFIRMED,
+            ],
+        ).exists()
+
+        if active_bookings:
+            return Response(
+                {
+                    "detail": "This service cannot be deleted because it has active bookings."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
         service.is_active = False
-        service.save(update_fields=["is_active"])
+        service.save(update_fields=["is_active", "updated_at"])
         return Response(
             {"detail": "Service deactivated successfully."},
             status=status.HTTP_204_NO_CONTENT,
@@ -82,7 +102,6 @@ class ServiceViewSet(viewsets.ModelViewSet):
     def images(self, request, slug=None):
         service = self.get_object()
 
-        # 🔒 Operators can only upload to their own service
         if request.method == "POST":
             if (not request.user.is_staff) and (service.operator != request.user):
                 return Response(
@@ -144,6 +163,70 @@ class ServiceViewSet(viewsets.ModelViewSet):
         serializer = ServiceAvailabilitySerializer(availabilities, many=True)
         return Response(serializer.data)
 
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsAuthenticated],
+        url_path="deactivate",
+    )
+    def deactivate(self, request, slug=None):
+        service = self.get_object()
+
+        if not request.user.is_staff and service.operator != request.user:
+            return Response(
+                {"detail": "You do not own this service."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        # Prevent deactivation if active bookings exist
+        active_bookings = Booking.objects.filter(
+            service=service,
+            status__in=[
+                Booking.STATUS_PENDING,
+                Booking.STATUS_PAID,
+                Booking.STATUS_CONFIRMED,
+            ],
+        ).exists()
+
+        if active_bookings:
+            return Response(
+                {
+                    "detail": "This service cannot be deactivated because it has active bookings."
+                },
+                status=status.HTTP_400_BAD_REQUEST,
+            )
+
+        service.is_active = False
+        service.save(update_fields=["is_active", "updated_at"])
+
+        return Response(
+            {"detail": "Service deactivated successfully.", "is_active": service.is_active},
+            status=status.HTTP_200_OK,
+        )
+
+    @action(
+        detail=True,
+        methods=["post"],
+        permission_classes=[IsAuthenticated],
+        url_path="activate",
+    )
+    def activate(self, request, slug=None):
+        service = self.get_object()
+
+        if not request.user.is_staff and service.operator != request.user:
+            return Response(
+                {"detail": "You do not own this service."},
+                status=status.HTTP_403_FORBIDDEN,
+            )
+
+        service.is_active = True
+        service.save(update_fields=["is_active", "updated_at"])
+
+        return Response(
+            {"detail": "Service activated successfully.", "is_active": service.is_active},
+            status=status.HTTP_200_OK,
+        )
+
 
 class PackageViewSet(viewsets.ModelViewSet):
     http_method_names = ["get", "post", "put", "patch", "delete", "options", "head"]
@@ -165,7 +248,7 @@ class PackageViewSet(viewsets.ModelViewSet):
 
     def perform_create(self, serializer):
         """
-        ✅ Enforce that operators can only add packages to their own services.
+        Enforce that operators can only add packages to their own services.
         Also guarantees packages are always attached to a service.
         """
         user = self.request.user
