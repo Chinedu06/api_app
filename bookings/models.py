@@ -1,7 +1,16 @@
+import secrets
+
 from django.db import models
 from django.conf import settings
 from services.models import Service, Package
 from services.models import ServiceTimeSlot
+
+
+def generate_booking_qr_token() -> str:
+    """
+    Generate a secure, hard-to-guess token for QR verification.
+    """
+    return secrets.token_urlsafe(32)
 
 
 class Booking(models.Model):
@@ -83,7 +92,7 @@ class Booking(models.Model):
     service_duration_hours_snapshot = models.PositiveIntegerField(null=True, blank=True)
 
     # ----------------------------
-    # PRICE SNAPSHOT FIELDS (NEW)
+    # PRICE SNAPSHOT FIELDS
     # ----------------------------
     service_price_snapshot = models.DecimalField(
         max_digits=12,
@@ -103,6 +112,18 @@ class Booking(models.Model):
         null=True,
         blank=True,
         help_text="Final booked amount at the time the booking was created."
+    )
+
+    # ----------------------------
+    # QR VERIFICATION
+    # ----------------------------
+    booking_qr_token = models.CharField(
+        max_length=255,
+        unique=True,
+        null=True,
+        blank=True,
+        db_index=True,
+        help_text="Secure token used for booking QR verification."
     )
 
     # ----------------------------
@@ -185,6 +206,27 @@ class Booking(models.Model):
         if self.service_price_snapshot is not None:
             return self.service_price_snapshot
         return self.total_price
+
+    @property
+    def is_qr_verification_valid(self):
+        """
+        Booking is valid for QR verification only when paid and confirmed.
+        """
+        return (
+            self.payment_status == self.PAYMENT_PAID
+            and self.status == self.STATUS_CONFIRMED
+        )
+
+    def ensure_qr_token(self):
+        """
+        Generate a QR token if missing.
+        """
+        if not self.booking_qr_token:
+            self.booking_qr_token = generate_booking_qr_token()
+
+    def save(self, *args, **kwargs):
+        self.ensure_qr_token()
+        super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Booking#{self.pk} {self.service.title} for {self.given_name} {self.surname}"

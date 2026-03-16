@@ -23,11 +23,27 @@ def _send(subject: str, message: str, recipients: list[str]) -> None:
 
 
 def email_operator_approved(user) -> None:
-    subject = "Your operator account has been approved"
+    subject = "Welcome to the Allicom Tourism Partner Network!"
     message = (
-        f"Hello {user.username},\n\n"
-        "Your operator account has been approved successfully by the admin.\n"
-        "You can now log in and start managing your tours on the platform.\n\n"
-        "Thank you."
+        "Dear Operator,\n\n"
+        "We are excited to have you join our Africa community of professional tour operators. "
+        "By registering on our booking platform, you have taken a significant step toward expanding "
+        "your reach and connecting with travelers seeking authentic, and  high-quality of Africa experiences.\n\n"
+        "Your expertise is what makes our marketplace unique, and we look forward to showcasing your "
+        "tour services to a wider audience.\n\n"
+        "Next Steps to Get Started\n"
+        "To begin managing your profile and uploading your tour packages, please log in to you account on our portal:\n\n"
+        "Visit https://operators.allicomtourism.com/\n\n"
+        "Use the username and password you created during the registration process.\n\n"
+        "Once logged in, you will be able to update your company details, set your availability, and "
+        "start listing your services for our travelers to discover.\n\n"
+        "Note:\n"
+        "If you encounter any issues accessing your account or have questions about setting up your listings, "
+        "our professional support team is available 24/7 to assist you.\n\n"
+        "Call/WhatsApp: +2348055853454\n"
+        "E-mail: supports@allicomtourism.com\n\n"
+        "We are excited to work together to promote wonders of Africa across the globe.\n\n"
+        "Best regards,\n"
+        "The Allicom Tourism Team"
     )
     _send(subject, message, [user.email])

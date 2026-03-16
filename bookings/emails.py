@@ -1,14 +1,53 @@
+import base64
 import logging
+from io import BytesIO
+
+import qrcode
+
 from django.conf import settings
-from django.core.mail import send_mail
+from django.core.mail import EmailMultiAlternatives, send_mail
 from django.contrib.auth import get_user_model
 
 logger = logging.getLogger("bookings")
 
 
+def get_booking_verify_url(booking) -> str:
+    base_url = getattr(
+        settings,
+        "BOOKING_VERIFY_BASE_URL",
+        "https://api.allicomtourism.com/api/v1/bookings/verify/"
+    )
+    return f"{base_url}{booking.booking_qr_token}/"
+
+
+def build_qr_code_base64(data: str) -> str | None:
+    """
+    Generates a QR code and returns base64 PNG string for inline HTML email display.
+    """
+    try:
+        qr = qrcode.QRCode(
+            version=1,
+            box_size=8,
+            border=4,
+        )
+        qr.add_data(data)
+        qr.make(fit=True)
+
+        image = qr.make_image(fill_color="black", back_color="white")
+
+        buffer = BytesIO()
+        image.save(buffer, format="PNG")
+        buffer.seek(0)
+
+        return base64.b64encode(buffer.read()).decode("utf-8")
+    except Exception as exc:
+        logger.exception(f"[QR] Failed to generate QR code: {exc}")
+        return None
+
+
 def _send(subject: str, message: str, recipients: list[str]) -> None:
     """
-    Safe email sender: never crashes booking flow.
+    Safe plain email sender: never crashes booking flow.
     """
     recipients = [r for r in recipients if r]
     if not recipients:
@@ -24,6 +63,24 @@ def _send(subject: str, message: str, recipients: list[str]) -> None:
         )
     except Exception as exc:
         logger.exception(f"[Email] Failed to send '{subject}' to {recipients}: {exc}")
+
+
+def _send_html(subject: str, text_body: str, html_body: str, recipients: list[str]) -> None:
+    recipients = [r for r in recipients if r]
+    if not recipients:
+        return
+
+    try:
+        email = EmailMultiAlternatives(
+            subject=subject,
+            body=text_body,
+            from_email=getattr(settings, "DEFAULT_FROM_EMAIL", None),
+            to=recipients,
+        )
+        email.attach_alternative(html_body, "text/html")
+        email.send(fail_silently=False)
+    except Exception as exc:
+        logger.exception(f"[HTML Email] Failed to send '{subject}' to {recipients}: {exc}")
 
 
 def get_admin_emails() -> list[str]:
@@ -177,15 +234,53 @@ def email_operator_booking_paid(booking) -> None:
 
 
 def email_tourist_booking_confirmed(booking) -> None:
+    """
+    Final confirmation email with QR code + secure verification link.
+    """
     subject = f"Booking confirmed (#{booking.pk})"
-    message = (
+    verify_url = get_booking_verify_url(booking)
+    qr_base64 = build_qr_code_base64(verify_url)
+
+    text_message = (
         f"Hi {booking.given_name},\n\n"
         "Good news — your booking has been CONFIRMED by the tour operator.\n\n"
         f"{booking_summary_text(booking)}\n"
         f"{payment_summary_text(booking)}\n"
-        "\nThank you."
+        f"Booking Verification Link:\n{verify_url}\n\n"
+        "Please keep this email safe and present the QR code or verification link at check-in.\n\n"
+        "Thank you."
     )
-    _send(subject, message, [booking.email])
+
+    qr_html = (
+        f'<p><img src="data:image/png;base64,{qr_base64}" alt="Booking QR Code" style="max-width:260px;height:auto;" /></p>'
+        if qr_base64
+        else ""
+    )
+
+    html_message = f"""
+    <html>
+        <body style="font-family: Arial, sans-serif; color: #222;">
+            <p>Hi {booking.given_name},</p>
+
+            <p><strong>Good news — your booking has been CONFIRMED by the tour operator.</strong></p>
+
+            <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">{booking_summary_text(booking)}</pre>
+            <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">{payment_summary_text(booking)}</pre>
+
+            <p><strong>Booking Verification Link:</strong><br />
+            <a href="{verify_url}">{verify_url}</a></p>
+
+            <p><strong>Booking QR Code:</strong></p>
+            {qr_html}
+
+            <p>Please keep this email safe and present the QR code or verification link at check-in.</p>
+
+            <p>Thank you.</p>
+        </body>
+    </html>
+    """
+
+    _send_html(subject, text_message, html_message, [booking.email])
 
 
 def email_tourist_booking_rejected(booking) -> None:
