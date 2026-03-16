@@ -1,7 +1,6 @@
 from django.db import models
 from django.conf import settings
 from services.models import Service, Package
-from django.utils import timezone
 from services.models import ServiceTimeSlot
 
 
@@ -17,7 +16,7 @@ class Booking(models.Model):
 
     """
     Booking model with full travel details, package selection,
-    traveler info, dates, and workflow.
+    traveler info, dates, pricing snapshots, and workflow.
     """
 
     # ----------------------------
@@ -76,13 +75,35 @@ class Booking(models.Model):
     )
 
     # ----------------------------
-    # SNAPSHOT FIELDS (NEW)
-    # Store service details at time of booking to avoid future edits affecting history.
+    # SNAPSHOT FIELDS
     # ----------------------------
     service_title_snapshot = models.CharField(max_length=200, blank=True, default="")
     service_description_snapshot = models.TextField(blank=True, default="")
     service_inclusive_snapshot = models.TextField(blank=True, default="")
     service_duration_hours_snapshot = models.PositiveIntegerField(null=True, blank=True)
+
+    # ----------------------------
+    # PRICE SNAPSHOT FIELDS (NEW)
+    # ----------------------------
+    service_price_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    package_price_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+    )
+    final_price_snapshot = models.DecimalField(
+        max_digits=12,
+        decimal_places=2,
+        null=True,
+        blank=True,
+        help_text="Final booked amount at the time the booking was created."
+    )
 
     # ----------------------------
     # Traveler & Contact Information
@@ -143,9 +164,27 @@ class Booking(models.Model):
     # ----------------------------
     @property
     def total_price(self):
+        """
+        Live/computed price from current service/package.
+        Kept for backward compatibility.
+        """
         if self.package:
             return self.package.price
         return self.service.price
+
+    @property
+    def booked_total_price(self):
+        """
+        Stable historical price captured at booking time.
+        Falls back safely if snapshot is missing on older records.
+        """
+        if self.final_price_snapshot is not None:
+            return self.final_price_snapshot
+        if self.package_price_snapshot is not None:
+            return self.package_price_snapshot
+        if self.service_price_snapshot is not None:
+            return self.service_price_snapshot
+        return self.total_price
 
     def __str__(self):
         return f"Booking#{self.pk} {self.service.title} for {self.given_name} {self.surname}"
@@ -160,11 +199,7 @@ class Booking(models.Model):
             return
 
         self.payment_status = self.PAYMENT_PAID
-
-        # New workflow: paid first, operator confirms later
-        # (keeps operator control + avoids overbooking losses)
         self.status = self.STATUS_PAID
-
         self.save(update_fields=["payment_status", "status", "updated_at"])
 
 

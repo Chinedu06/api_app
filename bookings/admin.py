@@ -1,10 +1,8 @@
 from django.contrib import admin
 from django.utils.html import format_html
-from django.urls import reverse
 
 from .models import Booking, Notification
 from payments.models import Payment
-
 
 
 @admin.register(Booking)
@@ -16,6 +14,7 @@ class BookingAdmin(admin.ModelAdmin):
         "user",
         "status",
         "payment_status",
+        "final_price_snapshot",
         "created_at",
         "payment_reference",
     )
@@ -32,6 +31,13 @@ class BookingAdmin(admin.ModelAdmin):
     )
 
     readonly_fields = (
+        "service_title_snapshot",
+        "service_description_snapshot",
+        "service_inclusive_snapshot",
+        "service_duration_hours_snapshot",
+        "service_price_snapshot",
+        "package_price_snapshot",
+        "final_price_snapshot",
         "payment_summary",
         "created_at",
         "updated_at",
@@ -43,8 +49,8 @@ class BookingAdmin(admin.ModelAdmin):
                 "service",
                 "package",
                 "user",
+                "time_slot",
 
-                # Passenger Info
                 "given_name",
                 "surname",
                 "other_names",
@@ -52,16 +58,31 @@ class BookingAdmin(admin.ModelAdmin):
                 "email",
                 "full_contact_address",
 
-                # Travelers
                 "num_adults",
                 "num_children",
 
-                # Trip dates
                 "start_date",
                 "end_date",
 
-                # Notes
                 "notes",
+            )
+        }),
+
+        ("Tour Snapshot (Read Only)", {
+            "classes": ("collapse",),
+            "fields": (
+                "service_title_snapshot",
+                "service_description_snapshot",
+                "service_inclusive_snapshot",
+                "service_duration_hours_snapshot",
+            )
+        }),
+
+        ("Price Snapshot (Read Only)", {
+            "fields": (
+                "service_price_snapshot",
+                "package_price_snapshot",
+                "final_price_snapshot",
             )
         }),
 
@@ -83,9 +104,6 @@ class BookingAdmin(admin.ModelAdmin):
         }),
     )
 
-    # -----------------------------------------
-    # Custom Display Helpers
-    # -----------------------------------------
     def payment_reference(self, obj):
         if hasattr(obj, "payment") and obj.payment.reference:
             return obj.payment.reference
@@ -93,7 +111,6 @@ class BookingAdmin(admin.ModelAdmin):
     payment_reference.short_description = "Pay Ref"
 
     def payment_summary(self, obj):
-        """Human-friendly summary of payment info."""
         if not hasattr(obj, "payment"):
             return "No payment record."
 
@@ -113,10 +130,6 @@ class BookingAdmin(admin.ModelAdmin):
         )
     payment_summary.short_description = "Payment Summary"
 
-
-# =======================================================================
-# NOTIFICATIONS ADMIN
-# =======================================================================
 
 @admin.register(Notification)
 class NotificationAdmin(admin.ModelAdmin):

@@ -5,7 +5,10 @@ from django.dispatch import receiver
 from .models import Booking, Notification
 from .emails import (
     email_admin_new_booking,
+    email_admin_payment_received,
+    email_admin_booking_confirmed,
     email_tourist_booking_received,
+    email_tourist_payment_received,
     email_operator_booking_paid,
     email_tourist_booking_confirmed,
     email_tourist_booking_rejected,
@@ -35,7 +38,7 @@ def booking_pre_save(sender, instance, **kwargs):
 @receiver(post_save, sender=Booking)
 def booking_post_save(sender, instance, created, **kwargs):
     """
-    Keep your dashboard Notification table intact, but ALSO send emails.
+    Keep dashboard Notification table intact, and also send emails.
     """
     try:
         def create_notification(recipient, message):
@@ -44,11 +47,8 @@ def booking_post_save(sender, instance, created, **kwargs):
         service = getattr(instance, "service", None)
         operator = getattr(service, "operator", None) if service else None
 
-        # ==========================================================
-        # 1) Booking created (PENDING / UNPAID)
-        # ==========================================================
+        # 1) Booking created
         if created:
-            # dashboard notifications (existing behavior)
             if operator:
                 create_notification(
                     operator,
@@ -60,15 +60,10 @@ def booking_post_save(sender, instance, created, **kwargs):
                 f"New booking #{instance.pk} received for '{service.title}' by {instance.given_name} {instance.surname}."
             )
 
-            # emails (NEW)
-            email_admin_new_booking(instance)          # all admins
-            email_tourist_booking_received(instance)   # tourist
-
+            email_admin_new_booking(instance)
+            email_tourist_booking_received(instance)
             return
 
-        # ==========================================================
-        # 2) Detect status & payment changes
-        # ==========================================================
         old_status = getattr(instance, "_old_status", None)
         new_status = instance.status
 
@@ -78,55 +73,76 @@ def booking_post_save(sender, instance, created, **kwargs):
         status_changed = old_status != new_status
         payment_changed = old_payment != new_payment
 
-        # ==========================================================
-        # 3) Payment became PAID -> notify operator (email + dashboard)
-        #    (This is the key moment: operator can now confirm)
-        # ==========================================================
+        # 2) Payment became PAID
         if payment_changed and new_payment == Booking.PAYMENT_PAID:
-            # dashboard notification
             if operator:
                 create_notification(
                     operator,
                     f"Booking #{instance.pk} for '{service.title}' is now PAID and awaiting your confirmation."
                 )
 
-            # email operator
-            email_operator_booking_paid(instance)
+            create_notification(
+                None,
+                f"Payment received for booking #{instance.pk} - '{service.title}'. Awaiting operator confirmation."
+            )
 
-        # ==========================================================
-        # 4) Operator confirms -> notify tourist (email + dashboard)
-        # ==========================================================
+            email_operator_booking_paid(instance)
+            email_tourist_payment_received(instance)
+            email_admin_payment_received(instance)
+
+        # 3) Operator confirms
         if status_changed and new_status == Booking.STATUS_CONFIRMED:
             if operator:
-                create_notification(operator, f"Booking #{instance.pk} for '{service.title}' has been confirmed.")
+                create_notification(
+                    operator,
+                    f"Booking #{instance.pk} for '{service.title}' has been confirmed."
+                )
+
+            create_notification(
+                None,
+                f"Booking #{instance.pk} for '{service.title}' has been confirmed by the operator."
+            )
+
             if instance.user:
-                create_notification(instance.user, f"Your booking #{instance.pk} has been confirmed.")
+                create_notification(
+                    instance.user,
+                    f"Your booking #{instance.pk} has been confirmed."
+                )
 
             email_tourist_booking_confirmed(instance)
+            email_admin_booking_confirmed(instance)
 
-        # ==========================================================
-        # 5) Operator rejects -> notify tourist (email + dashboard)
-        # ==========================================================
+        # 4) Operator rejects
         if status_changed and new_status == Booking.STATUS_REJECTED:
             reason = instance.admin_note or "No reason provided."
 
             if operator:
-                create_notification(operator, f"Booking #{instance.pk} was rejected. Reason: {reason}")
-            if instance.user:
-                create_notification(instance.user, f"Your booking #{instance.pk} was rejected. Reason: {reason}")
+                create_notification(
+                    operator,
+                    f"Booking #{instance.pk} was rejected. Reason: {reason}"
+                )
 
-            create_notification(None, f"Booking #{instance.pk} for '{service.title}' was rejected. Reason: {reason}")
+            if instance.user:
+                create_notification(
+                    instance.user,
+                    f"Your booking #{instance.pk} was rejected. Reason: {reason}"
+                )
+
+            create_notification(
+                None,
+                f"Booking #{instance.pk} for '{service.title}' was rejected. Reason: {reason}"
+            )
 
             email_tourist_booking_rejected(instance)
 
-        # ==========================================================
-        # 6) Cancelled -> (optional email later if you want)
-        # ==========================================================
+        # 5) Cancelled
         if status_changed and new_status == Booking.STATUS_CANCELLED:
             initiator = getattr(instance.user, "username", "Unknown")
             create_notification(None, f"Booking #{instance.pk} has been cancelled by {initiator}.")
+
             if operator:
                 create_notification(operator, f"Booking #{instance.pk} has been cancelled.")
+
             if instance.user:
                 create_notification(instance.user, f"Your booking #{instance.pk} has been cancelled.")
 

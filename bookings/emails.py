@@ -28,11 +28,21 @@ def _send(subject: str, message: str, recipients: list[str]) -> None:
 
 def get_admin_emails() -> list[str]:
     """
-    All staff + superuser admins should receive every booking alert.
+    All staff + superuser admins should receive booking alerts.
     """
     User = get_user_model()
-    qs = User.objects.filter(is_active=True).filter(is_staff=True) | User.objects.filter(is_active=True, is_superuser=True)
-    return list(qs.values_list("email", flat=True))
+    qs = User.objects.filter(is_active=True, is_staff=True) | User.objects.filter(
+        is_active=True,
+        is_superuser=True
+    )
+    qs = qs.distinct()
+    return [email for email in qs.values_list("email", flat=True) if email]
+
+
+def format_money(value) -> str:
+    if value is None:
+        return "N/A"
+    return f"{value}"
 
 
 def booking_summary_text(booking) -> str:
@@ -44,13 +54,18 @@ def booking_summary_text(booking) -> str:
     desc = booking.service_description_snapshot or ""
     inclusive = booking.service_inclusive_snapshot or ""
     duration = booking.service_duration_hours_snapshot
+    package_name = booking.package.name if booking.package else "N/A"
 
     duration_line = f"{duration} hour(s)" if duration else "N/A"
 
     return (
         f"Booking ID: {booking.pk}\n"
         f"Tour: {title}\n"
+        f"Package: {package_name}\n"
         f"Duration: {duration_line}\n"
+        f"Service Price Snapshot: {format_money(booking.service_price_snapshot)}\n"
+        f"Package Price Snapshot: {format_money(booking.package_price_snapshot)}\n"
+        f"Final Booked Price: {format_money(booking.final_price_snapshot)}\n"
         f"Start Date: {booking.start_date}\n"
         f"End Date: {booking.end_date or 'N/A'}\n"
         f"Adults: {booking.num_adults}\n"
@@ -65,12 +80,52 @@ def booking_summary_text(booking) -> str:
     )
 
 
+def payment_summary_text(booking) -> str:
+    payment = getattr(booking, "payment", None)
+    provider = getattr(payment, "provider", None) or "N/A"
+    reference = getattr(payment, "reference", None) or "N/A"
+    amount = getattr(payment, "amount", None) or booking.booked_total_price
+    paid_at = getattr(payment, "paid_at", None) or "N/A"
+
+    return (
+        f"Payment Provider: {provider}\n"
+        f"Payment Reference: {reference}\n"
+        f"Payment Amount: {format_money(amount)}\n"
+        f"Paid At: {paid_at}\n"
+    )
+
+
 def email_admin_new_booking(booking) -> None:
     subject = f"[New Booking] #{booking.pk} - {booking.service_title_snapshot or booking.service.title}"
     message = (
         "A new booking has been created on the platform.\n\n"
         f"{booking_summary_text(booking)}\n"
         f"Status: {booking.status}\n"
+        f"Payment Status: {booking.payment_status}\n"
+    )
+    _send(subject, message, get_admin_emails())
+
+
+def email_admin_payment_received(booking) -> None:
+    subject = f"[Payment Received] Booking #{booking.pk} - {booking.service_title_snapshot or booking.service.title}"
+    message = (
+        "Payment has been received successfully for the booking below.\n"
+        "The booking is now pending operator confirmation.\n\n"
+        f"{booking_summary_text(booking)}\n"
+        f"{payment_summary_text(booking)}\n"
+        f"Booking Status: {booking.status}\n"
+        f"Payment Status: {booking.payment_status}\n"
+    )
+    _send(subject, message, get_admin_emails())
+
+
+def email_admin_booking_confirmed(booking) -> None:
+    subject = f"[Booking Confirmed] #{booking.pk} - {booking.service_title_snapshot or booking.service.title}"
+    message = (
+        "The operator has confirmed the booking below.\n\n"
+        f"{booking_summary_text(booking)}\n"
+        f"{payment_summary_text(booking)}\n"
+        f"Booking Status: {booking.status}\n"
         f"Payment Status: {booking.payment_status}\n"
     )
     _send(subject, message, get_admin_emails())
@@ -90,6 +145,21 @@ def email_tourist_booking_received(booking) -> None:
     _send(subject, message, [booking.email])
 
 
+def email_tourist_payment_received(booking) -> None:
+    subject = f"Payment received successfully (#{booking.pk})"
+    message = (
+        f"Hi {booking.given_name},\n\n"
+        "Your payment for this booking has been received successfully.\n"
+        "Your booking is now pending confirmation by the tour operator.\n\n"
+        f"{booking_summary_text(booking)}\n"
+        f"{payment_summary_text(booking)}\n"
+        f"Current Status: {booking.status}\n"
+        f"Payment Status: {booking.payment_status}\n"
+        "\nThank you."
+    )
+    _send(subject, message, [booking.email])
+
+
 def email_operator_booking_paid(booking) -> None:
     operator = getattr(booking.service, "operator", None)
     operator_email = getattr(operator, "email", None)
@@ -99,6 +169,7 @@ def email_operator_booking_paid(booking) -> None:
         "A booking has been marked as PAID and is ready for your review.\n"
         "Please CONFIRM or REJECT based on your availability.\n\n"
         f"{booking_summary_text(booking)}\n"
+        f"{payment_summary_text(booking)}\n"
         f"Status: {booking.status}\n"
         f"Payment Status: {booking.payment_status}\n"
     )
@@ -111,6 +182,7 @@ def email_tourist_booking_confirmed(booking) -> None:
         f"Hi {booking.given_name},\n\n"
         "Good news — your booking has been CONFIRMED by the tour operator.\n\n"
         f"{booking_summary_text(booking)}\n"
+        f"{payment_summary_text(booking)}\n"
         "\nThank you."
     )
     _send(subject, message, [booking.email])

@@ -1,4 +1,6 @@
 import uuid
+from decimal import Decimal
+
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
@@ -19,7 +21,7 @@ def initiate_bank_transfer(request, booking_id):
 
     txn = Transaction.objects.create(
         booking=booking,
-        amount=booking.service.price,
+        amount=Decimal(booking.booked_total_price),
         provider=Transaction.PROVIDER_BANK,
         status=Transaction.STATUS_PENDING,
         reference=f"BANK-{uuid.uuid4().hex[:10].upper()}",
@@ -28,6 +30,7 @@ def initiate_bank_transfer(request, booking_id):
     return JsonResponse({
         "message": "Bank transfer initiated",
         "reference": txn.reference,
+        "amount": float(txn.amount),
         "bank_details": {
             "bank": settings.BANK_NAME,
             "account_name": settings.BANK_ACCOUNT_NAME,
