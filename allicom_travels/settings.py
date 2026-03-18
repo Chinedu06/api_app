@@ -108,7 +108,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = "apikey"
 EMAIL_HOST_PASSWORD = os.environ.get("SENDGRID_API_KEY")
 
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Allicom Travels <supports@allicomtourism.com>")
+DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Allicom Tourism <supports@allicomtourism.com>")
 
 # PASSWORDS
 AUTH_PASSWORD_VALIDATORS = [
@@ -215,8 +215,8 @@ CSRF_TRUSTED_ORIGINS = [
 # }
 
 SPECTACULAR_SETTINGS = {
-    "TITLE": "Allicom Travels API",
-    "DESCRIPTION": "API documentation for Allicom Travels",
+    "TITLE": "Allicom Tourism API",
+    "DESCRIPTION": "API documentation for Allicom Tourism",
     "VERSION": "1.0.0",
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
     "SERVE_AUTHENTICATION": [],

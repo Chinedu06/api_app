@@ -98,22 +98,14 @@ class UpdateBookingStatusView(APIView):
 
         booking.status = new_status
 
+        update_fields = ["status", "updated_at"]
+
         # If rejected and reason provided, store it
         if new_status == Booking.STATUS_REJECTED and reason:
             booking.admin_note = reason
+            update_fields.append("admin_note")
 
-        booking.save(update_fields=["status", "admin_note", "updated_at"])
-
-        return Response(
-            {
-                "message": "Booking status updated",
-                "status": booking.status,
-                "booking_status": booking.status,
-                "payment_status": booking.payment_status,
-                "admin_note": booking.admin_note,
-            },
-            status=status.HTTP_200_OK,
-        )
+        booking.save(update_fields=update_fields)
 
 
 class MyNotificationsView(generics.ListAPIView):
