@@ -45,6 +45,7 @@ class UpdateBookingStatusView(APIView):
 
     def post(self, request, booking_id):
         new_status = request.data.get("status")
+        reason = request.data.get("reason", "").strip()
 
         allowed_statuses = {
             Booking.STATUS_PENDING,
@@ -96,10 +97,21 @@ class UpdateBookingStatusView(APIView):
             )
 
         booking.status = new_status
-        booking.save(update_fields=["status", "updated_at"])
+
+        # If rejected and reason provided, store it
+        if new_status == Booking.STATUS_REJECTED and reason:
+            booking.admin_note = reason
+
+        booking.save(update_fields=["status", "admin_note", "updated_at"])
 
         return Response(
-            {"message": "Booking status updated", "status": booking.status},
+            {
+                "message": "Booking status updated",
+                "status": booking.status,
+                "booking_status": booking.status,
+                "payment_status": booking.payment_status,
+                "admin_note": booking.admin_note,
+            },
             status=status.HTTP_200_OK,
         )
 

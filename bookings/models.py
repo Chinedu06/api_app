@@ -135,6 +135,21 @@ class Booking(models.Model):
     contact_number = models.CharField(max_length=40)
     email = models.EmailField()
     full_contact_address = models.TextField(blank=True)
+    nationality = models.CharField(max_length=100, blank=True)
+    current_residence = models.CharField(max_length=100, blank=True)
+
+    ID_TYPE_CHOICES = [
+        ("passport", "Passport"),
+        ("national_id", "National ID"),
+        ("driver_license", "Driver License"),
+        ("employment_id", "Employment ID"),
+    ]
+
+    id_card_type = models.CharField(
+        max_length=50,
+        choices=ID_TYPE_CHOICES,
+        blank=True,
+    )
 
     # ----------------------------
     # Booking Details
