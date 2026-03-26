@@ -100,12 +100,22 @@ class UpdateBookingStatusView(APIView):
 
         update_fields = ["status", "updated_at"]
 
-        # If rejected and reason provided, store it
         if new_status == Booking.STATUS_REJECTED and reason:
             booking.admin_note = reason
             update_fields.append("admin_note")
 
         booking.save(update_fields=update_fields)
+
+        return Response(
+            {
+                "message": "Booking status updated successfully",
+                "status": booking.status,
+                "booking_status": booking.status,
+                "payment_status": booking.payment_status,
+                "admin_note": booking.admin_note,
+            },
+            status=status.HTTP_200_OK,
+        )
 
 
 class MyNotificationsView(generics.ListAPIView):
@@ -198,17 +208,17 @@ class BookingVerifyView(APIView):
 
         reasons = []
 
-        if booking.payment_status != Booking.PAYMENT_PAID:
-            reasons.append("Payment has not been completed.")
-
-        if booking.status != Booking.STATUS_CONFIRMED:
-            reasons.append("Booking has not been confirmed by the operator.")
-
         if booking.status == Booking.STATUS_CANCELLED:
             reasons.append("Booking has been cancelled.")
 
         if booking.status == Booking.STATUS_REJECTED:
             reasons.append("Booking has been rejected.")
+
+        if booking.payment_status != Booking.PAYMENT_PAID:
+            reasons.append("Payment has not been completed.")
+
+        if booking.status != Booking.STATUS_CONFIRMED:
+            reasons.append("Booking has not been confirmed by the operator.")
 
         is_valid = booking.is_qr_verification_valid and not reasons
 

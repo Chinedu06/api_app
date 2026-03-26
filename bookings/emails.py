@@ -14,12 +14,29 @@ logger = logging.getLogger("bookings")
 
 
 def get_booking_verify_url(booking) -> str:
+    """
+    Frontend ticket URL used in email button + QR.
+    Frontend page should extract the token and call backend verify API.
+    """
+    base_url = getattr(
+        settings,
+        "BOOKING_TICKET_FRONTEND_URL",
+        "https://tourism.allicomtravels.com/ticket/",
+    ).rstrip("/")
+    return f"{base_url}/{booking.booking_qr_token}"
+
+
+def get_backend_verify_api_url(booking) -> str:
+    """
+    Backend verification API URL.
+    Kept for reference/debugging if needed.
+    """
     base_url = getattr(
         settings,
         "BOOKING_VERIFY_BASE_URL",
         "https://api.allicomtourism.com/api/v1/bookings/verify/",
-    )
-    return f"{base_url}{booking.booking_qr_token}/"
+    ).rstrip("/")
+    return f"{base_url}/{booking.booking_qr_token}/"
 
 
 def get_qr_logo_path() -> Path:
@@ -196,9 +213,9 @@ def footer_html() -> str:
         <a href="https://allicomtravels.com/services/" target="_blank">Tour Booking</a> |
         <a href="https://tourism.allicomtravels.com" target="_blank">Tour Packages</a> |
         <a href="https://allicomtravels.com/services/" target="_blank">Hotels</a> |
-        <a href="https://www.allicomtravels.com" target="_blank">Cars hire</a> |
+        <a href="https://allicomtravels.com/services/" target="_blank">Cars hire</a> |
         <a href="https://allicomtravels.com/services/" target="_blank">Visa Support</a> |
-        <a href="https://www.allicomtravels.com" target="_blank">Insurance</a>
+        <a href="https://allicomtravels.com/services/" target="_blank">Insurance</a>
     </p>
 
     <p><strong>Office Addresses:</strong></p>
@@ -311,48 +328,161 @@ def email_operator_booking_paid(booking) -> None:
 
 
 def email_tourist_booking_confirmed(booking) -> None:
+    """
+    Final confirmation email using the new HTML template.
+    Placeholder variables are replaced with actual booking values.
+    """
     subject = f"Booking confirmed (#{booking.pk})"
-    verify_url = get_booking_verify_url(booking)
-    qr_base64 = build_qr_code_base64(verify_url)
+
+    verification_link = get_booking_verify_url(booking)
+    qr_base64 = build_qr_code_base64(verification_link)
+    qr_code_image_url = (
+        f"data:image/png;base64,{qr_base64}" if qr_base64 else ""
+    )
+
+    customer_first_name = booking.given_name or ""
+    customer_full_name = f"{booking.given_name} {booking.surname}".strip()
+    tour_title = booking.service_title_snapshot or booking.service.title
+    package_name = booking.package.name if booking.package else "N/A"
+    duration = (
+        f"{booking.service_duration_hours_snapshot} hour(s)"
+        if booking.service_duration_hours_snapshot
+        else "N/A"
+    )
+    start_date = str(booking.start_date) if booking.start_date else "N/A"
+    end_date = str(booking.end_date) if booking.end_date else "N/A"
+    final_price = format_money(booking.final_price_snapshot or booking.booked_total_price)
+    payment_status = booking.payment_status.title() if booking.payment_status else "N/A"
 
     text_message = (
-        f"Hi {booking.given_name},\n\n"
+        f"Hi {customer_first_name},\n\n"
         "Good news — your booking has been CONFIRMED by the tour operator.\n\n"
         f"{booking_summary_text(booking)}\n"
         f"{payment_summary_text(booking)}\n"
-        f"Booking Verification Link:\n{verify_url}\n\n"
-        "Please keep this email safe and present the QR code or verification link at check-in.\n"
+        f"Online Ticket:\n{verification_link}\n\n"
+        "Please keep this email safe and present the QR code or ticket page at check-in.\n"
         f"{footer_text()}"
     )
 
-    qr_html = (
-        f'<p><img src="data:image/png;base64,{qr_base64}" alt="Booking QR Code" style="max-width:260px;height:auto;" /></p>'
-        if qr_base64
-        else ""
-    )
+    html_template = """<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Booking Confirmation - Allicom Tourism</title>
+    <style>
+        body { margin: 0; padding: 0; background-color: #f8fafc; font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif; -webkit-font-smoothing: antialiased; }
+        .wrapper { width: 100%; table-layout: fixed; background-color: #f8fafc; padding: 40px 0; }
+        .main { background-color: #ffffff; margin: 0 auto; width: 100%; max-width: 600px; border-radius: 12px; overflow: hidden; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); }
+        .header { background-color: #1e3a8a; padding: 30px; text-align: center; color: #ffffff; }
+        .header h1 { margin: 0; font-size: 24px; font-weight: 700; letter-spacing: 0.5px; }
+        .header p { margin: 5px 0 0 0; font-size: 14px; color: #bfdbfe; }
+        .content { padding: 40px 30px; color: #334155; }
+        .success-banner { background-color: #ecfdf5; border-left: 4px solid #10b981; padding: 15px 20px; border-radius: 4px; margin-bottom: 30px; }
+        .success-banner h2 { margin: 0 0 5px 0; color: #065f46; font-size: 18px; }
+        .success-banner p { margin: 0; color: #047857; font-size: 14px; line-height: 1.5; }
+        .section-title { font-size: 12px; text-transform: uppercase; letter-spacing: 1px; color: #94a3b8; font-weight: 700; border-bottom: 1px solid #e2e8f0; padding-bottom: 8px; margin-bottom: 15px; margin-top: 30px; }
+        .grid { display: block; width: 100%; }
+        .row { margin-bottom: 12px; font-size: 14px; line-height: 1.6; }
+        .label { font-weight: 700; color: #475569; display: inline-block; width: 140px; }
+        .value { color: #0f172a; }
+        .price-box { background-color: #f1f5f9; padding: 20px; border-radius: 8px; margin-top: 20px; text-align: right; }
+        .price-box .total { font-size: 24px; font-weight: 800; color: #1e3a8a; margin-top: 5px; }
+        .qr-section { text-align: center; margin-top: 40px; padding-top: 30px; border-top: 2px dashed #e2e8f0; }
+        .qr-code { max-width: 200px; height: auto; margin: 20px auto; border: 10px solid #ffffff; box-shadow: 0 4px 6px rgba(0,0,0,0.1); border-radius: 8px; }
+        .btn { display: inline-block; background-color: #2563eb; color: #ffffff !important; text-decoration: none; padding: 14px 28px; border-radius: 6px; font-weight: 600; font-size: 15px; margin-top: 15px; }
+        .footer { text-align: center; padding: 30px; color: #64748b; font-size: 12px; line-height: 1.6; background-color: #f8fafc; }
+        @media screen and (max-width: 600px) {
+            .main { border-radius: 0; }
+            .content { padding: 30px 20px; }
+            .label { display: block; width: 100%; margin-bottom: 2px; color: #64748b; }
+            .row { margin-bottom: 16px; }
+        }
+    </style>
+</head>
+<body>
+    <main class="wrapper">
+        <div class="main">
+            <div class="header">
+                <h1>Allicom Tourism</h1>
+                <p>Explore Africa, Explore Cultures!</p>
+            </div>
 
-    html_message = f"""
-    <html>
-        <body style="font-family: Arial, sans-serif; color: #222;">
-            <p>Hi {booking.given_name},</p>
+            <div class="content">
+                <div class="success-banner">
+                    <h2>Booking Confirmed!</h2>
+                    <p>Hi {{ customer_first_name }}, good news! Your tour operator has successfully confirmed your booking.</p>
+                </div>
 
-            <p><strong>Good news — your booking has been CONFIRMED by the tour operator.</strong></p>
+                <div class="section-title">Tour Details</div>
+                <div class="grid">
+                    <div class="row"><span class="label">Booking ID:</span> <span class="value">#{{ booking_id }}</span></div>
+                    <div class="row"><span class="label">Tour Name:</span> <span class="value"><strong>{{ tour_title }}</strong></span></div>
+                    <div class="row"><span class="label">Package:</span> <span class="value" style="text-transform: capitalize;">{{ package_name }}</span></div>
+                    <div class="row"><span class="label">Duration:</span> <span class="value">{{ duration }}</span></div>
+                    <div class="row"><span class="label">Start Date:</span> <span class="value">{{ start_date }}</span></div>
+                    <div class="row"><span class="label">End Date:</span> <span class="value">{{ end_date }}</span></div>
+                    <div class="row"><span class="label">Guests:</span> <span class="value">{{ num_adults }} Adult(s), {{ num_children }} Child(ren)</span></div>
+                </div>
 
-            <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">{booking_summary_text(booking)}</pre>
-            <pre style="white-space: pre-wrap; font-family: Arial, sans-serif;">{payment_summary_text(booking)}</pre>
+                <div class="section-title">Customer Details</div>
+                <div class="grid">
+                    <div class="row"><span class="label">Name:</span> <span class="value">{{ customer_full_name }}</span></div>
+                    <div class="row"><span class="label">Email:</span> <span class="value">{{ customer_email }}</span></div>
+                    <div class="row"><span class="label">Phone:</span> <span class="value">{{ customer_phone }}</span></div>
+                </div>
 
-            <p><strong>Booking Verification Link:</strong><br />
-            <a href="{verify_url}">{verify_url}</a></p>
+                <div class="price-box">
+                    <div style="color: #64748b; font-size: 13px; text-transform: uppercase; font-weight: 700; letter-spacing: 0.5px;">Final Booked Price</div>
+                    <div class="total">${{ final_price }}</div>
+                    <div style="color: #10b981; font-weight: 600; font-size: 14px; margin-top: 8px;">
+                        Payment Status: {{ payment_status }}
+                    </div>
+                </div>
 
-            <p><strong>Booking QR Code:</strong></p>
-            {qr_html}
+                <div class="qr-section">
+                    <h3 style="margin: 0; color: #0f172a; font-size: 18px;">Your Digital Ticket</h3>
+                    <p style="margin: 8px 0 0 0; color: #64748b; font-size: 14px;">Please keep this email safe and present the QR code to your operator at check-in.</p>
 
-            <p>Please keep this email safe and present the QR code or verification link at check-in.</p>
+                    <img src="{{ qr_code_image_url }}" alt="Booking QR Code" class="qr-code">
 
-            {footer_html()}
-        </body>
-    </html>
-    """
+                    <div>
+                        <a href="{{ verification_link }}" class="btn">View Online Ticket</a>
+                    </div>
+                </div>
+            </div>
+
+            <div class="footer">
+                <p>Need help? Contact our support team at <a href="mailto:supports@allicomtourism.com" style="color: #2563eb; text-decoration: none;">supports@allicomtourism.com</a></p>
+                <p>&copy; 2026 Allicom Tourism. All Rights Reserved.</p>
+            </div>
+        </div>
+    </main>
+</body>
+</html>"""
+
+    replacements = {
+        "{{ customer_first_name }}": customer_first_name,
+        "{{ booking_id }}": str(booking.pk),
+        "{{ tour_title }}": tour_title,
+        "{{ package_name }}": package_name,
+        "{{ duration }}": duration,
+        "{{ start_date }}": start_date,
+        "{{ end_date }}": end_date,
+        "{{ num_adults }}": str(booking.num_adults),
+        "{{ num_children }}": str(booking.num_children),
+        "{{ customer_full_name }}": customer_full_name,
+        "{{ customer_email }}": booking.email or "",
+        "{{ customer_phone }}": booking.contact_number or "",
+        "{{ final_price }}": final_price,
+        "{{ payment_status }}": payment_status,
+        "{{ qr_code_image_url }}": qr_code_image_url,
+        "{{ verification_link }}": verification_link,
+    }
+
+    html_message = html_template
+    for placeholder, value in replacements.items():
+        html_message = html_message.replace(placeholder, value)
 
     _send_html(subject, text_message, html_message, [booking.email])
 

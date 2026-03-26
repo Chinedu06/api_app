@@ -26,7 +26,7 @@ INSTALLED_APPS = [
     "django.contrib.messages",
     "django.contrib.staticfiles",
 
-    'django_extensions',
+    "django_extensions",
 
     # Third-party
     "rest_framework",
@@ -37,7 +37,7 @@ INSTALLED_APPS = [
     "users",
     "services",
     "bookings",
-    "payments",\
+    "payments",
     "destinations",
 
     "drf_spectacular",
@@ -77,14 +77,8 @@ WSGI_APPLICATION = "allicom_travels.wsgi.application"
 # DATABASE (MySQL / MariaDB)
 DATABASES = {
     "default": {
-        "ENGINE": os.environ.get(
-            "DB_ENGINE",
-            "django.db.backends.sqlite3"
-        ),
-        "NAME": os.environ.get(
-            "DB_NAME",
-            BASE_DIR / "db.sqlite3"
-        ),
+        "ENGINE": os.environ.get("DB_ENGINE", "django.db.backends.sqlite3"),
+        "NAME": os.environ.get("DB_NAME", BASE_DIR / "db.sqlite3"),
         "USER": os.environ.get("DB_USER", ""),
         "PASSWORD": os.environ.get("DB_PASSWORD", ""),
         "HOST": os.environ.get("DB_HOST", ""),
@@ -95,7 +89,6 @@ DATABASES = {
     }
 }
 
-
 # ===========================
 # EMAIL (SendGrid SMTP)
 # ===========================
@@ -103,12 +96,25 @@ EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
 EMAIL_HOST = "smtp.sendgrid.net"
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-
-# SendGrid SMTP uses "apikey" as username, and your API key as password
 EMAIL_HOST_USER = "apikey"
 EMAIL_HOST_PASSWORD = os.environ.get("SENDGRID_API_KEY")
 
-DEFAULT_FROM_EMAIL = os.environ.get("DEFAULT_FROM_EMAIL", "Allicom Tourism <supports@allicomtourism.com>")
+DEFAULT_FROM_EMAIL = os.environ.get(
+    "DEFAULT_FROM_EMAIL",
+    "Allicom Tourism <supports@allicomtourism.com>",
+)
+
+# Frontend ticket page for QR/email links
+BOOKING_TICKET_FRONTEND_URL = os.environ.get(
+    "BOOKING_TICKET_FRONTEND_URL",
+    "https://tourism.allicomtravels.com/ticket/",
+)
+
+# Backend verification API base (kept for backend use/reference)
+BOOKING_VERIFY_BASE_URL = os.environ.get(
+    "BOOKING_VERIFY_BASE_URL",
+    "https://api.allicomtourism.com/api/v1/bookings/verify/",
+)
 
 # PASSWORDS
 AUTH_PASSWORD_VALIDATORS = [
@@ -126,14 +132,12 @@ USE_TZ = True
 STATIC_URL = "/static/"
 STATIC_ROOT = "/home/allicomt/domains/api.allicomtourism.com/public_html/static"
 
-
 MEDIA_URL = "/media/"
 MEDIA_ROOT = BASE_DIR / "media"
 
 # UPLOAD HARD LIMITS (GLOBAL SAFETY)
-DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024      # 10MB
-FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024      # 10MB
-
+DATA_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
+FILE_UPLOAD_MAX_MEMORY_SIZE = 10 * 1024 * 1024
 
 # CUSTOM USER MODEL
 AUTH_USER_MODEL = "users.User"
@@ -144,35 +148,19 @@ REST_FRAMEWORK = {
         "rest_framework_simplejwt.authentication.JWTAuthentication",
         "rest_framework.authentication.SessionAuthentication",
     ],
-
     "DEFAULT_PERMISSION_CLASSES": [
         "rest_framework.permissions.AllowAny",
     ],
-
-    # 🔐 THROTTLING (GLOBAL)
     "DEFAULT_THROTTLE_CLASSES": [
         "rest_framework.throttling.AnonRateThrottle",
         "rest_framework.throttling.UserRateThrottle",
     ],
-
-    "DEFAULT_THROTTLE_RATES": {
-        "anon": "100/hour",      # public users
-        "user": "1000/hour",     # logged-in users
-    },
-
-    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
-
-    "DEFAULT_THROTTLE_CLASSES": [
-        "rest_framework.throttling.AnonRateThrottle",
-        "rest_framework.throttling.UserRateThrottle",
-    ],
-
     "DEFAULT_THROTTLE_RATES": {
         "anon": "100/hour",
         "user": "1000/hour",
     },
+    "DEFAULT_SCHEMA_CLASS": "drf_spectacular.openapi.AutoSchema",
 }
-
 
 # SIMPLE JWT
 SIMPLE_JWT = {
@@ -197,23 +185,6 @@ CSRF_TRUSTED_ORIGINS = [
     "https://www.api.allicomtourism.com",
 ]
 
-# SPECTACULAR_SETTINGS = {
-#     "TITLE": "Allicom Tourism API",
-#     "DESCRIPTION": "Backend API for Allicom Tourism & Travel Services",
-#     "VERSION": "1.0.0",
-
-#     "SERVE_INCLUDE_SCHEMA": False,
-
-#     # 👇 THIS IS THE IMPORTANT PART
-#     "DEFAULT_GENERATOR_CLASS": "drf_spectacular.generators.SchemaGenerator",
-
-#     "SECURITY": [
-#         {
-#             "bearerAuth": [],
-#         }
-#     ],
-# }
-
 SPECTACULAR_SETTINGS = {
     "TITLE": "Allicom Tourism API",
     "DESCRIPTION": "API documentation for Allicom Tourism",
@@ -221,4 +192,3 @@ SPECTACULAR_SETTINGS = {
     "SERVE_PERMISSIONS": ["rest_framework.permissions.AllowAny"],
     "SERVE_AUTHENTICATION": [],
 }
-
